@@ -1,15 +1,10 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import AppNavigator from './navigation/AppNavigator';
 
 export default function Index() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Tsimpologion App</Text>
+    <View style={{ flex: 1 }}>
+      <AppNavigator />
     </View>
   );
 }

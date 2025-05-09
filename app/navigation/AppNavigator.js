@@ -1,60 +1,128 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { StyleSheet, Dimensions } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { Feather } from '@expo/vector-icons';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import HomeScreen from '../screens/HomeScreen';
-import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
+import HomeScreen from '../screens/HomeScreen'; 
 import ProfileScreen from '../screens/ProfileScreen';
+import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
+import LoadingScreen from '../screens/LoadingScreen';
 
-// Import colors
+import { useAuth } from '../../services/AuthProvider';
 import colors from '../styles/colors';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
+const Tab = createMaterialTopTabNavigator(); // Using MaterialTopTabNavigator for gestures
 
-const AppNavigator = () => {
+// Auth stack for login/register screens
+function AuthStack() {
   return (
-    <Stack.Navigator
-      initialRouteName="Login"
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.primary,
-        },
-        headerTintColor: colors.white,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        headerBackTitleVisible: false,
+    <Stack.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.white },
       }}
     >
-      <Stack.Screen 
-        name="Login" 
-        component={LoginScreen} 
-        options={{ title: 'Tsimpologion - Login' }}
-      />
-      <Stack.Screen 
-        name="Register" 
-        component={RegisterScreen} 
-        options={{ title: 'Tsimpologion - Register' }}
-      />
-      <Stack.Screen 
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Home tabs with gesture navigation and hidden tab bar
+function HomeTabs() {
+  const { width } = Dimensions.get('window');
+  
+  return (
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={{
+        tabBarStyle: { display: 'none' }, // Hide the tab bar completely
+        swipeEnabled: true, // Enable swipe gestures
+        animationEnabled: true,
+        lazy: true,
+      }}
+      style={styles.container}
+      sceneContainerStyle={styles.sceneContainer}
+    >
+      <Tab.Screen 
         name="Home" 
         component={HomeScreen} 
-        options={{ title: 'Tsimpologion' }}
       />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen} 
+      />
+      {/* Add more screens here */}
+    </Tab.Navigator>
+  );
+}
+
+// Main stack for the authenticated app flow
+function MainStack() {
+  return (
+    <Stack.Navigator>
+      {/* HomeTabs without any header */}
+      <Stack.Screen 
+        name="HomeTabs" 
+        component={HomeTabs} 
+        options={{ 
+          headerShown: false 
+        }} 
+      />
+      
+      {/* FoodSpotDetail with custom back gesture */}
       <Stack.Screen 
         name="FoodSpotDetail" 
         component={FoodSpotDetailScreen} 
-        options={({ route }) => ({ title: route.params?.name || 'Food Spot Details' })}
+        options={{ 
+          headerShown: false, // Hide the header completely
+          animation: 'slide_from_right',
+          gestureEnabled: true, // Enable swipe back gesture
+          gestureDirection: 'horizontal',
+          contentStyle: {
+            backgroundColor: colors.white,
+          }
+        }} 
       />
-      <Stack.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{ title: 'Profile' }}
-      />
+      
+      {/* Add other screens here with similar options */}
     </Stack.Navigator>
   );
-};
+}
 
-export default AppNavigator;
+// Root navigator
+export default function AppNavigator() {
+  const { token, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {token ? (
+          <Stack.Screen name="App" component={MainStack} />
+        ) : (
+          <Stack.Screen name="Auth" component={AuthStack} />
+        )}
+      </Stack.Navigator>
+    </GestureHandlerRootView>
+  );
+}
+
+// Styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  sceneContainer: {
+    backgroundColor: colors.white,
+  },
+});

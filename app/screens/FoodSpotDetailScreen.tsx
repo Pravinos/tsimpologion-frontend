@@ -13,13 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
+import UserReviewItem from '../components/UserReviewItem';
 import StarRating from '../components/StarRating';
-import { getFoodSpot, getReviews, createReview } from '../../services/ApiClient';
+import { getFoodSpot, getReviews, createReview, updateReview, deleteReview } from '../../services/ApiClient';
 import { FoodSpot, Review } from '../../types/models';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 
-const FoodSpotDetailScreen = ({ route, navigation }) => {
+const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { id } = route.params;
   const { token, user } = useAuth();
   
@@ -70,18 +71,18 @@ const FoodSpotDetailScreen = ({ route, navigation }) => {
 
   const handleSubmitReview = async () => {
     if (!token) {
-      Alert.alert('Σύνδεση Απαιτείται', 'Παρακαλώ συνδεθείτε για να αφήσετε αξιολόγηση.');
+      Alert.alert('Login Required', 'Please log in to leave a review.');
       navigation.navigate('Profile'); // Direct them to the profile screen to log in
       return;
     }
 
     if (userRating === 0) {
-      Alert.alert('Απαιτείται Βαθμολογία', 'Παρακαλώ επιλέξτε μια βαθμολογία για την αξιολόγησή σας.');
+      Alert.alert('Rating Required', 'Please select a rating for your review.');
       return;
     }
 
     if (!reviewText.trim()) {
-      Alert.alert('Απαιτείται Σχόλιο', 'Παρακαλώ γράψτε ένα σχόλιο για την αξιολόγησή σας.');
+      Alert.alert('Comment Required', 'Please write a comment for your review.');
       return;
     }
 
@@ -96,15 +97,34 @@ const FoodSpotDetailScreen = ({ route, navigation }) => {
       // Clear the form and refresh reviews
       setReviewText('');
       setUserRating(0);
-      fetchReviews();
-      
-      Alert.alert('Επιτυχία', 'Η αξιολόγησή σας υποβλήθηκε με επιτυχία!');
-    } catch (err) {
+      fetchReviews();      
+      Alert.alert('Success', 'Your review has been submitted successfully!');
+    } catch (err: any) {
       console.error('Failed to submit review:', err);
-      const errorMessage = err.response?.data?.message || 'Δεν ήταν δυνατή η υποβολή της αξιολόγησής σας. Παρακαλώ δοκιμάστε ξανά.';
-      Alert.alert('Σφάλμα', errorMessage);
+      const errorMessage = err.response?.data?.message || 'Failed to submit your review. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateReview = async (reviewId: number, data: { rating: number; comment: string }) => {
+    try {
+      await updateReview(id, reviewId, data);
+      fetchReviews(); // Refresh reviews after update
+    } catch (err: any) {
+      console.error('Failed to update review:', err);
+      throw err; // Re-throw to let UserReviewItem handle the error display
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    try {
+      await deleteReview(id, reviewId);
+      fetchReviews(); // Refresh reviews after deletion
+    } catch (err: any) {
+      console.error('Failed to delete review:', err);
+      throw err; // Re-throw to let UserReviewItem handle the error display
     }
   };
 
@@ -168,9 +188,14 @@ const FoodSpotDetailScreen = ({ route, navigation }) => {
           <View style={styles.iconBackground}>
             <Feather name="map-pin" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.name}>{foodSpot.name}</Text>
+          <Text style={styles.name}>{foodSpot.name}</Text>        
           <View style={styles.ratingContainer}>
-            <StarRating rating={foodSpot.rating || 0} size={18} />
+            <StarRating 
+              rating={foodSpot.rating || 0} 
+              size={18} 
+              selectable={false} 
+              onRatingChange={() => {}} 
+            />
             <Text style={styles.ratingText}>
               {foodSpot.rating ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
             </Text>
@@ -179,25 +204,25 @@ const FoodSpotDetailScreen = ({ route, navigation }) => {
             {foodSpot.category} · {foodSpot.city}
           </Text>
         </View>
-        
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Σχετικά</Text>
+          <Text style={styles.sectionTitle}>About</Text>
           <Text style={styles.description}>{foodSpot.description}</Text>
         </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Τοποθεσία</Text>
+          <Text style={styles.sectionTitle}>Location</Text>
           <Text style={styles.address}>{foodSpot.address}</Text>
           <TouchableOpacity style={styles.mapButton} onPress={openMap}>
             <Feather name="map" size={16} color={colors.white} />
-            <Text style={styles.mapButtonText}>Δες το στο Google Maps</Text>
+            <Text style={styles.mapButtonText}>View on Google Maps</Text>
           </TouchableOpacity>
         </View>
         
         <View style={styles.section}>
           <View style={styles.reviewHeader}>
-            <Text style={styles.sectionTitle}>Αξιολογήσεις</Text>
-            <Text style={styles.reviewCount}>{reviews.length} Αξιολογήσεις</Text>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            <Text style={styles.reviewCount}>{reviews.length} Reviews</Text>
           </View>
           
           {isLoadingReviews ? (
@@ -205,70 +230,144 @@ const FoodSpotDetailScreen = ({ route, navigation }) => {
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.loadingText}>Loading reviews...</Text>
             </View>
-          ) : reviews.length > 0 ? (
-            reviews.map(review => (
-              <ReviewItem 
-                key={review.id} 
-                review={{
-                  ...review,
-                  // Ensure user property has expected format for ReviewItem
-                  user: review.user?.name || 'Unknown User'
-                }} 
-              />
-            ))
-          ) : (
-            <Text style={styles.noReviewsText}>No reviews yet. Be the first to leave a review!</Text>
-          )}
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Κάνε την δικιά σου αξιολόγηση</Text>
-          
-          {!token ? (
-            <View style={styles.loginPrompt}>
-              <Text style={styles.loginPromptText}>
-                Παρακαλώ συνδεθείτε για να αφήσετε αξιολόγηση
-              </Text>
-              <TouchableOpacity 
-                style={styles.loginButton}
-                onPress={() => navigation.navigate('Profile')}
-              >
-                <Text style={styles.loginButtonText}>Σύνδεση</Text>
-              </TouchableOpacity>
-            </View>
           ) : (
             <>
-              <View style={styles.ratingSelector}>
-                <Text style={styles.ratingLabel}>Βαθμολογία:</Text>
-                <StarRating 
-                  rating={userRating} 
-                  size={24} 
-                  selectable={true}
-                  onRatingChange={setUserRating} 
-                />
-              </View>
-              <TextInput
-                style={styles.reviewInput}
-                placeholder="Share your experience..."
-                multiline
-                value={reviewText}
-                onChangeText={setReviewText}
-                editable={!isSubmitting}
-              />
-              <TouchableOpacity 
-                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-                onPress={handleSubmitReview}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.submitButtonText}>ΥΠΟΒΟΛΗ</Text>
-                )}
-              </TouchableOpacity>
+              {/* User's own review section */}
+              {(() => {
+                const userReview = reviews.find(review => 
+                  review.user_id === user?.id || 
+                  (typeof review.user === 'object' && review.user?.id === user?.id)
+                );
+                
+                if (userReview && token) {
+                  return (
+                    <View style={styles.userReviewSection}>
+                      <Text style={styles.userReviewTitle}>Your Review</Text>
+                      <UserReviewItem 
+                        key={userReview.id}
+                        review={userReview}
+                        onUpdate={handleUpdateReview}
+                        onDelete={handleDeleteReview}
+                      />
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+              
+              {/* Other users' reviews section */}
+              {(() => {
+                const otherReviews = reviews.filter(review => 
+                  review.user_id !== user?.id && 
+                  !(typeof review.user === 'object' && review.user?.id === user?.id)
+                );
+                
+                if (otherReviews.length > 0) {
+                  return (
+                    <View style={styles.otherReviewsSection}>
+                      {token && reviews.some(review => 
+                        review.user_id === user?.id || 
+                        (typeof review.user === 'object' && review.user?.id === user?.id)
+                      ) && (
+                        <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
+                      )}
+                      {otherReviews.map(review => (
+                        <ReviewItem 
+                          key={review.id} 
+                          review={{
+                            ...review,
+                            // Ensure user property has expected format for ReviewItem
+                            user: review.user?.name || 'Unknown User'
+                          }} 
+                        />
+                      ))}
+                    </View>
+                  );
+                }
+                
+                // Show message if no other reviews exist
+                if (reviews.length === 0 || 
+                    (reviews.length === 1 && (
+                      reviews[0].user_id === user?.id || 
+                      (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)
+                    ))) {
+                  return (
+                    <Text style={styles.noReviewsText}>
+                      {reviews.length === 0 
+                        ? "No reviews yet. Be the first to leave a review!" 
+                        : "No other reviews yet."}
+                    </Text>
+                  );
+                }
+                
+                return null;
+              })()}
             </>
           )}
         </View>
+        
+        {/* Leave Your Review section - only show if user doesn't have a review yet */}
+        {(() => {
+          const userHasReview = token && reviews.some(review => 
+            review.user_id === user?.id || 
+            (typeof review.user === 'object' && review.user?.id === user?.id)
+          );
+          
+          if (userHasReview) {
+            return null; // Don't show the form if user already has a review
+          }
+          
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Leave Your Review</Text>
+              
+              {!token ? (
+                <View style={styles.loginPrompt}>
+                  <Text style={styles.loginPromptText}>
+                    Please log in to leave a review
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.loginButton}
+                    onPress={() => navigation.navigate('Profile')}
+                  >
+                    <Text style={styles.loginButtonText}>Log In</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.ratingSelector}>
+                    <Text style={styles.ratingLabel}>Rating:</Text>
+                    <StarRating 
+                      rating={userRating} 
+                      size={24} 
+                      selectable={true}
+                      onRatingChange={setUserRating} 
+                    />
+                  </View>
+                  <TextInput
+                    style={styles.reviewInput}
+                    placeholder="Share your experience..."
+                    multiline
+                    value={reviewText}
+                    onChangeText={setReviewText}
+                    editable={!isSubmitting}
+                  />
+                  <TouchableOpacity 
+                    style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                    onPress={handleSubmitReview}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                      <Text style={styles.submitButtonText}>SUBMIT</Text>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          );
+        })()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -463,7 +562,25 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: colors.white,
     fontWeight: 'bold',
-  }
+  },
+  userReviewSection: {
+    marginBottom: 20,
+  },
+  userReviewTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: colors.primary,
+  },
+  otherReviewsSection: {
+    marginTop: 10,
+  },
+  otherReviewsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: colors.black,
+  },
 });
 
 export default FoodSpotDetailScreen;

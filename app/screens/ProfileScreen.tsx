@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,13 +10,14 @@ import {
   Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 import { getCurrentUser, getUserReviews } from '../../services/ApiClient';
 import { User, Review } from '../../types/models';
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, logout } = useAuth();
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [userReviews, setUserReviews] = useState<Review[]>([]);
@@ -24,7 +25,6 @@ const ProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     if (token) {
       fetchUserProfile();
@@ -32,6 +32,16 @@ const ProfileScreen = ({ navigation }) => {
       setLoading(false);
     }
   }, [token]);
+
+  // Use focus effect to refresh user reviews when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Only refetch reviews if we have a user profile with an ID and token exists
+      if (token && userProfile?.id) {
+        fetchUserReviews(userProfile.id);
+      }
+    }, [token, userProfile?.id])
+  );
 
   const fetchUserProfile = async () => {
     try {
@@ -57,7 +67,7 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const fetchUserReviews = async (userId) => {
+  const fetchUserReviews = async (userId: number) => {
     try {
       setReviewsLoading(true);
       const response = await getUserReviews(userId);
@@ -90,8 +100,8 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Αποσύνδεση', 'Είστε σίγουροι ότι θέλετε να αποσυνδεθείτε;', [
-      { text: 'Ακύρωση', style: 'cancel' },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
       { text: 'OK', onPress: logout }
     ]);
   };
@@ -137,9 +147,8 @@ const ProfileScreen = ({ navigation }) => {
       </SafeAreaView>
     );
   }
-
-  const displayName = userProfile?.name || authUser?.name || 'Χρήστης';
-  const displayEmail = userProfile?.email || authUser?.email || 'Δεν υπάρχει email';
+  const displayName = userProfile?.name || authUser?.name || 'User';
+  const displayEmail = userProfile?.email || authUser?.email || 'No email';
   const displayJoinDate = userProfile?.created_at 
     ? new Date(userProfile.created_at).toLocaleDateString() 
     : 'N/A';
@@ -148,8 +157,8 @@ const ProfileScreen = ({ navigation }) => {
     ? userProfile.role === 'foodie' 
       ? 'Food Explorer' 
       : userProfile.role === 'spot_owner' 
-        ? 'Επιχειρηματίας' 
-        : 'Διαχειριστής'
+        ? 'Business Owner' 
+        : 'Administrator'
     : 'Food Explorer';
 
   return (
@@ -169,9 +178,9 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.role}>{displayRole}</Text>
         </View>
-
+        
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Πληροφορίες Λογαριασμού</Text>
+          <Text style={styles.sectionTitle}>Account Information</Text>
 
           <View style={styles.infoItem}>
             <Feather name="mail" size={20} color={colors.primary} style={styles.infoIcon} />
@@ -184,7 +193,7 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.infoItem}>
             <Feather name="calendar" size={20} color={colors.primary} style={styles.infoIcon} />
             <View>
-              <Text style={styles.infoLabel}>Μέλος από</Text>
+              <Text style={styles.infoLabel}>Member Since</Text>
               <Text style={styles.infoValue}>{displayJoinDate}</Text>
             </View>
           </View>
@@ -192,37 +201,37 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.infoItem}>
             <Feather name="message-square" size={20} color={colors.primary} style={styles.infoIcon} />
             <View>
-              <Text style={styles.infoLabel}>Αξιολογήσεις</Text>
+              <Text style={styles.infoLabel}>Reviews</Text>
               <Text style={styles.infoValue}>
                 {reviewsLoading ? 'Loading...' : displayReviewsCount}
               </Text>
             </View>
           </View>
-
+          
           {userProfile?.role === 'spot_owner' && (
             <View style={styles.infoItem}>
               <Feather name="home" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Επιχειρήσεις</Text>
+                <Text style={styles.infoLabel}>Businesses</Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('MySpots')}
                 >
                   <Text style={[styles.infoValue, styles.linkText]}>
-                    Προβολή των επιχειρήσεών μου
+                    View my businesses
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
         </View>
-
+        
         <View style={styles.actionsSection}>
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => navigation.navigate('EditProfile')}
           >
             <Feather name="edit-2" size={20} color={colors.primary} style={styles.actionIcon} />
-            <Text style={styles.actionText}>Επεξεργασία λογαριασμού</Text>
+            <Text style={styles.actionText}>Edit Profile</Text>
           </TouchableOpacity>
 
           {userProfile?.role === 'spot_owner' && (
@@ -231,7 +240,7 @@ const ProfileScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('AddFoodSpot')}
             >
               <Feather name="plus-circle" size={20} color={colors.primary} style={styles.actionIcon} />
-              <Text style={styles.actionText}>Προσθήκη Επιχείρησης</Text>
+              <Text style={styles.actionText}>Add Business</Text>
             </TouchableOpacity>
           )}
 
@@ -240,7 +249,7 @@ const ProfileScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Settings')}
           >
             <Feather name="settings" size={20} color={colors.primary} style={styles.actionIcon} />
-            <Text style={styles.actionText}>Ρυθμίσεις</Text>
+            <Text style={styles.actionText}>Settings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -256,7 +265,7 @@ const ProfileScreen = ({ navigation }) => {
             onPress={handleLogout}
           >
             <Feather name="log-out" size={20} color={colors.error} style={styles.actionIcon} />
-            <Text style={[styles.actionText, styles.logoutText]}>Αποσύνδεση</Text>
+            <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
           </TouchableOpacity>
         </View>
 

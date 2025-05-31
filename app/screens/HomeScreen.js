@@ -72,11 +72,13 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <View style={styles.container}>        
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcome}>Καλώς Ήρθες{user ? ` ${user.name}` : ''}</Text>
-            <Text style={styles.title}>Τσιμπολόγιον</Text>
+            <Text style={styles.welcome}>
+              Welcome{user && user.name ? ` ${user.name}` : ''}
+            </Text>
+            <Text style={styles.title}>Tsimpologion</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileButton}
@@ -92,7 +94,7 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Search')}
           >
             <Feather name="search" size={20} color={colors.darkGray} />
-            <Text style={styles.searchPlaceholder}>Αναζήτησε μέρη για φαγητό...</Text>
+            <Text style={styles.searchPlaceholder}>Search for food places...</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.filterButton}
@@ -102,7 +104,7 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.sectionTitle}>Δημοφιλή Μέρη για Φαγητό</Text>
+        <Text style={styles.sectionTitle}>Popular Food Places</Text>
         
         {error ? (
           <View style={styles.errorContainer}>
@@ -138,12 +140,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: 10, // Add extra padding to push content down from the top
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+    marginTop: 8, // Add margin to push header down from status bar
   },
   welcome: {
     fontSize: 16,

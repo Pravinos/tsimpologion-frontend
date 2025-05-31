@@ -10,6 +10,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen'; 
 import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
@@ -75,11 +76,25 @@ function MainStack() {
           headerShown: false 
         }} 
       />
-      
-      {/* FoodSpotDetail with custom back gesture */}
+        {/* FoodSpotDetail with custom back gesture */}
       <Stack.Screen 
         name="FoodSpotDetail" 
         component={FoodSpotDetailScreen} 
+        options={{ 
+          headerShown: false, // Hide the header completely
+          animation: 'slide_from_right',
+          gestureEnabled: true, // Enable swipe back gesture
+          gestureDirection: 'horizontal',
+          contentStyle: {
+            backgroundColor: colors.white,
+          }
+        }} 
+      />
+      
+      {/* EditProfile screen */}
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen} 
         options={{ 
           headerShown: false, // Hide the header completely
           animation: 'slide_from_right',

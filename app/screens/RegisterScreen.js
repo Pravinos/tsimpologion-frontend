@@ -82,11 +82,11 @@ const RegisterScreen = ({ navigation }) => {
                style={{ width: 80, height: 80 }} // Slightly smaller logo
                resizeMode="contain"
              />
-             <Text style={styles.appName}>Τσιμπολόγιον</Text>
+             <Text style={styles.appName}>Tsimpologion</Text>
            </View>
 
           <View style={styles.formContainer}>
-            <Text style={styles.title}>Δημιουργία Λογαριασμού</Text>
+            <Text style={styles.title}>Create Account</Text>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -95,7 +95,7 @@ const RegisterScreen = ({ navigation }) => {
               <Feather name="user" size={20} color={colors.darkGray} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Όνομα"
+                placeholder="Username"
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -122,7 +122,7 @@ const RegisterScreen = ({ navigation }) => {
               <Feather name="lock" size={20} color={colors.darkGray} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Κωδικός Πρόσβασης"
+                placeholder="Password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -146,15 +146,15 @@ const RegisterScreen = ({ navigation }) => {
               {isLoading ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.buttonText}>ΕΓΓΡΑΦΗ</Text>
+                <Text style={styles.buttonText}>Register</Text>
               )}
             </TouchableOpacity>
 
             {/* Login Link */}
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Έχεις ήδη λογαριασμό; </Text>
+              <Text style={styles.loginText}>Already have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={isLoading}>
-                <Text style={[styles.loginLink, isLoading && styles.linkDisabled]}>Σύνδεση</Text>
+                <Text style={[styles.loginLink, isLoading && styles.linkDisabled]}>Login</Text>
               </TouchableOpacity>
             </View>
           </View>

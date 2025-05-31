@@ -27,7 +27,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Σφάλμα', 'Παρακαλώ συμπληρώστε το email και τον κωδικό πρόσβασης.');
+      Alert.alert('Error', 'Please enter your email and password.');
       return;
     }
 
@@ -43,16 +43,13 @@ const LoginScreen = ({ navigation }) => {
     } catch (err) {
       console.error('Login failed in component:', err);
       // Extract a more specific error message if possible from your API response structure
-      const errorMessage = err.response?.data?.message || 'Η σύνδεση απέτυχε. Ελέγξτε τα στοιχεία σας.';
+      const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials.';
       setError(errorMessage);
-      Alert.alert('Σφάλμα Σύνδεσης', errorMessage);
+      Alert.alert('Login Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // ... rest of the component (return statement with JSX) remains largely the same ...
-  // Make sure to use the 'isLoading' and 'error' states as before in the JSX
 
   return (
       <SafeAreaView style={styles.safeArea}>
@@ -68,12 +65,12 @@ const LoginScreen = ({ navigation }) => {
                 style={{ width: 100, height: 100 }}
                 resizeMode="contain"
               />
-              <Text style={styles.appName}>Τσιμπολόγιον</Text>
-              <Text style={styles.tagline}>Βρες το Πιάτο σου, Όπου κι Αν Είσαι!</Text>
+              <Text style={styles.appName}>Tsimpologion</Text>
+              <Text style={styles.tagline}>Find Your Dish, Wherever You Are!</Text>
             </View>
 
             <View style={styles.formContainer}>
-              <Text style={styles.title}>Σύνδεση</Text>
+              <Text style={styles.title}>Welcome!</Text>
 
               {/* Display error message if exists */}
               {error && <Text style={styles.errorText}>{error}</Text>}
@@ -124,15 +121,15 @@ const LoginScreen = ({ navigation }) => {
                 {isLoading ? (
                   <ActivityIndicator color={colors.white} /> // Show spinner
                 ) : (
-                  <Text style={styles.buttonText}>ΣΥΝΔΕΣΗ</Text> // Show text
+                  <Text style={styles.buttonText}>Login</Text> // Show text
                 )}
               </TouchableOpacity>
 
               {/* ... Register Container ... */}
               <View style={styles.registerContainer}>
-                <Text style={styles.registerText}>Δεν έχεις λογαριασμό; </Text>
+                <Text style={styles.registerText}>Don't have an account? </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
-                  <Text style={[styles.registerLink, isLoading && styles.linkDisabled]}>Εγγραφή</Text>
+                  <Text style={[styles.registerLink, isLoading && styles.linkDisabled]}>Register</Text>
                 </TouchableOpacity>
               </View>
             </View>

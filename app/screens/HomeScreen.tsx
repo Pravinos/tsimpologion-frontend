@@ -134,14 +134,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Dynamically extract unique categories from foodSpots and format them
   const categories = useMemo(() => {
+    // Use a Set to ensure uniqueness
     const set = new Set<string>();
     (foodSpots as FoodSpot[]).forEach(spot => {
       if (spot.category) set.add(spot.category);
     });
-    // Format: capitalize first letter, replace _ with space
-    return Array.from(set)
-      .map(cat => cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-      .sort();
+    return Array.from(set).sort();
   }, [foodSpots]);
 
   const [searchText, setSearchText] = useState('');
@@ -153,7 +151,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const filteredFoodSpots = useMemo(() => {
     let spots = (foodSpots as FoodSpot[]).filter((spot: FoodSpot) => {
       const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
-      const matchesCategory = !selectedCategory || spot.category === selectedCategory;
+      // Use strict equality for category only if selectedCategory is not empty, but trim and lowercase both sides for robustness
+      const matchesCategory = !selectedCategory || (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
       return matchesSearch && matchesCategory;
     });
     spots = spots.sort((a: FoodSpot, b: FoodSpot) => {

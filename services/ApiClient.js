@@ -176,11 +176,7 @@ export const getUserReviews = (userId) => {
 
 // --- Images ---
 export const uploadImage = (modelType, id, formData) => {
-  return post(`/images/${modelType}/${id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return post(`/images/${modelType}/${id}`, formData);
 };
 
 export const viewAllImages = (modelType, id) => 

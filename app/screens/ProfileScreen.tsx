@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
@@ -10,99 +10,67 @@ import {
   Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 import { getCurrentUser, getUserReviews } from '../../services/ApiClient';
 import { User, Review } from '../../types/models';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
+
+const API_BASE_URL = 'http://192.168.1.162:8000';
 
 const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, logout } = useAuth();
-  const [userProfile, setUserProfile] = useState<User | null>(null);
-  const [userReviews, setUserReviews] = useState<Review[]>([]);
-  const [reviewsCount, setReviewsCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (token) {
-      fetchUserProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+  const queryClient = useQueryClient();
 
-  // Use focus effect to refresh user reviews when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      // Only refetch reviews if we have a user profile with an ID and token exists
-      if (token && userProfile?.id) {
-        fetchUserReviews(userProfile.id);
-      }
-    }, [token, userProfile?.id])
-  );
-
-  const fetchUserProfile = async () => {
-    try {
-      setLoading(true);
-  
+  // React Query for user profile
+  const {
+    data: userProfile,
+    isLoading: loading,
+    isError: isProfileError,
+    refetch: refetchProfile,
+  } = useQuery({
+    queryKey: ['userProfile', token],
+    queryFn: async () => {
       const response = await getCurrentUser();
-      
-      // Handle API response format
-      const userData = response.data?.data || response.data;
-      setUserProfile(userData);
-      
-      // If we have a user ID, try to fetch their reviews
-      if (userData?.id) {
-        fetchUserReviews(userData.id);
-      }
-      
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-      setError('Failed to load user profile.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return response.data?.data || response.data;
+    },
+    enabled: !!token,
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const fetchUserReviews = async (userId: number) => {
-    try {
-      setReviewsLoading(true);
-      const response = await getUserReviews(userId);
-      
-      // Check if we have a paginated response with data array
+  // React Query for user reviews
+  const {
+    data: userReviews = [],
+    isLoading: reviewsLoading,
+    isError: isReviewsError,
+    refetch: refetchReviews,
+  } = useQuery({
+    queryKey: ['userReviews', userProfile?.id],
+    queryFn: async () => {
+      if (!userProfile?.id) return [];
+      const response = await getUserReviews(userProfile.id);
       if (response.data?.data && Array.isArray(response.data.data)) {
-        // This is a paginated response
-        setUserReviews(response.data.data);
-        // Set total count from pagination metadata
-        setReviewsCount(response.data.total || 0);
-      } 
-      // Check if we have a direct array response
-      else if (Array.isArray(response.data)) {
-        setUserReviews(response.data);
-        setReviewsCount(response.data.length);
-      } 
-      // Fallback to empty array if unknown format
-      else {
-        setUserReviews([]);
-        setReviewsCount(0);
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        return [];
       }
-      
-    } catch (err) {
-      console.error('Failed to fetch user reviews:', err);
-      setUserReviews([]);
-      setReviewsCount(0);
-    } finally {
-      setReviewsLoading(false);
-    }
-  };
+    },
+    enabled: !!userProfile?.id,
+    staleTime: 1000 * 60 * 2,
+  });
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: logout }
+      { text: 'OK', onPress: async () => {
+        await logout();
+        await queryClient.invalidateQueries({ queryKey: ['userProfile', token] });
+        await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
+      }}
     ]);
   };
 
@@ -135,24 +103,25 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     );
   }
 
-  if (error) {
+  if (isProfileError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchUserProfile}>
+          <Text style={styles.errorText}>Failed to load profile.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
+
   const displayName = userProfile?.name || authUser?.name || 'User';
   const displayEmail = userProfile?.email || authUser?.email || 'No email';
   const displayJoinDate = userProfile?.created_at 
     ? new Date(userProfile.created_at).toLocaleDateString() 
     : 'N/A';
-  const displayReviewsCount = reviewsCount || 0;
+  const displayReviewsCount = userReviews.length || 0;
   const displayRole = userProfile?.role 
     ? userProfile.role === 'foodie' 
       ? 'Food Explorer' 
@@ -163,116 +132,117 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            {userProfile?.images && userProfile.images.length > 0 ? (
-              <Image 
-                source={{ uri: userProfile.images[0] }} 
-                style={styles.avatar} 
-              />
-            ) : (
-              <Feather name="user" size={40} color={colors.white} />
-            )}
-          </View>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.role}>{displayRole}</Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-
-          <View style={styles.infoItem}>
-            <Feather name="mail" size={20} color={colors.primary} style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{displayEmail}</Text>
+      <View style={{flex: 1}}>
+        <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1}}>
+          <View style={styles.header}>
+            <View style={styles.avatarContainer}>
+              {userProfile?.images && userProfile.images.length > 0 ? (
+                <Image 
+                  source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
+                  style={styles.avatar} 
+                />
+              ) : (
+                <Feather name="user" size={40} color={colors.white} />
+              )}
             </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Feather name="calendar" size={20} color={colors.primary} style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Member Since</Text>
-              <Text style={styles.infoValue}>{displayJoinDate}</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Feather name="message-square" size={20} color={colors.primary} style={styles.infoIcon} />
-            <View>
-              <Text style={styles.infoLabel}>Reviews</Text>
-              <Text style={styles.infoValue}>
-                {reviewsLoading ? 'Loading...' : displayReviewsCount}
-              </Text>
-            </View>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.role}>{displayRole}</Text>
           </View>
           
-          {userProfile?.role === 'spot_owner' && (
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>Account Information</Text>
+
             <View style={styles.infoItem}>
-              <Feather name="home" size={20} color={colors.primary} style={styles.infoIcon} />
+              <Feather name="mail" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>
-                <Text style={styles.infoLabel}>Businesses</Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('MySpots')}
-                >
-                  <Text style={[styles.infoValue, styles.linkText]}>
-                    View my businesses
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoValue}>{displayEmail}</Text>
               </View>
             </View>
-          )}
-        </View>
-        
-        <View style={styles.actionsSection}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Feather name="edit-2" size={20} color={colors.primary} style={styles.actionIcon} />
-            <Text style={styles.actionText}>Edit Profile</Text>
-          </TouchableOpacity>
 
-          {userProfile?.role === 'spot_owner' && (
+            <View style={styles.infoItem}>
+              <Feather name="calendar" size={20} color={colors.primary} style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Member Since</Text>
+                <Text style={styles.infoValue}>{displayJoinDate}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Feather name="message-square" size={20} color={colors.primary} style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Reviews</Text>
+                <Text style={styles.infoValue}>
+                  {reviewsLoading ? 'Loading...' : displayReviewsCount}
+                </Text>
+              </View>
+            </View>
+            
+            {userProfile?.role === 'spot_owner' && (
+              <View style={styles.infoItem}>
+                <Feather name="home" size={20} color={colors.primary} style={styles.infoIcon} />
+                <View>
+                  <Text style={styles.infoLabel}>Businesses</Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('MySpots')}
+                  >
+                    <Text style={[styles.infoValue, styles.linkText]}>
+                      View my businesses
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.actionsSection}>
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => navigation.navigate('AddFoodSpot')}
+              onPress={() => navigation.navigate('EditProfile')}
             >
-              <Feather name="plus-circle" size={20} color={colors.primary} style={styles.actionIcon} />
-              <Text style={styles.actionText}>Add Business</Text>
+              <Feather name="edit-2" size={20} color={colors.primary} style={styles.actionIcon} />
+              <Text style={styles.actionText}>Edit Profile</Text>
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Feather name="settings" size={20} color={colors.primary} style={styles.actionIcon} />
-            <Text style={styles.actionText}>Settings</Text>
-          </TouchableOpacity>
+            {userProfile?.role === 'spot_owner' && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('AddFoodSpot')}
+              >
+                <Feather name="plus-circle" size={20} color={colors.primary} style={styles.actionIcon} />
+                <Text style={styles.actionText}>Add Business</Text>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Help')}
-          >
-            <Feather name="help-circle" size={20} color={colors.primary} style={styles.actionIcon} />
-            <Text style={styles.actionText}>Help & Support</Text>
-          </TouchableOpacity>
+            {/* <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Feather name="settings" size={20} color={colors.primary} style={styles.actionIcon} />
+              <Text style={styles.actionText}>Settings</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.logoutButton]}
-            onPress={handleLogout}
-          >
-            <Feather name="log-out" size={20} color={colors.error} style={styles.actionIcon} />
-            <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Help')}
+            >
+              <Feather name="help-circle" size={20} color={colors.primary} style={styles.actionIcon} />
+              <Text style={styles.actionText}>Help & Support</Text>
+            </TouchableOpacity> */}
 
+            <TouchableOpacity
+              style={[styles.actionButton, styles.logoutButton]}
+              onPress={handleLogout}
+            >
+              <Feather name="log-out" size={20} color={colors.error} style={styles.actionIcon} />
+              <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
         <View style={styles.footer}>
           <Text style={styles.version}>Tsimpologion v1.0.0</Text>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -376,7 +346,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
   },
   version: {
     fontSize: 14,

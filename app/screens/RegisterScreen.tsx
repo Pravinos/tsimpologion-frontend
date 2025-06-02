@@ -17,19 +17,80 @@ import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 
-const RegisterScreen = ({ navigation }) => {
+interface RegisterScreenProps {
+  navigation: any;
+}
+
+interface AuthInputProps {
+  icon: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  secureTextEntry?: boolean;
+  showToggle?: boolean;
+  onToggle?: () => void;
+  showValue?: boolean;
+  editable?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+}
+
+const AuthInput: React.FC<AuthInputProps> = ({
+  icon,
+  placeholder,
+  value,
+  onChangeText,
+  secureTextEntry = false,
+  showToggle = false,
+  onToggle,
+  showValue = false,
+  editable = true,
+  autoCapitalize = 'none',
+}) => (
+  <View style={styles.inputContainer}>
+    <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
+    <TextInput
+      style={styles.input}
+      placeholder={placeholder}
+      value={value}
+      onChangeText={onChangeText}
+      secureTextEntry={secureTextEntry && !showValue}
+      autoCapitalize={autoCapitalize}
+      editable={editable}
+    />
+    {showToggle && onToggle && (
+      <TouchableOpacity
+        onPress={onToggle}
+        style={styles.eyeIcon}
+        disabled={!editable}
+      >
+        <Feather
+          name={showValue ? 'eye-off' : 'eye'}
+          size={20}
+          color={colors.darkGray}
+        />
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const { register } = useAuth(); // Get register function from context
+  const [error, setError] = useState<string | null>(null);
+  const { register } = useAuth();
 
   const handleRegister = async () => {
     // Basic Validation
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !passwordConfirmation) {
       Alert.alert('Σφάλμα', 'Παρακαλώ συμπληρώστε όλα τα πεδία.');
+      return;
+    }
+    if (password !== passwordConfirmation) {
+      Alert.alert('Σφάλμα', 'Οι κωδικοί δεν ταιριάζουν.');
       return;
     }
 
@@ -38,7 +99,7 @@ const RegisterScreen = ({ navigation }) => {
 
     try {
       console.log(`Attempting registration for email: ${email}`);
-      await register({ name, email, password}); 
+      await register({ name, email, password, password_confirmation: passwordConfirmation }); 
       console.log('Registration successful via context.');
 
       // Registration successful
@@ -49,14 +110,14 @@ const RegisterScreen = ({ navigation }) => {
       );
       // If register function in context automatically logs in, navigation will be handled by AppNavigator
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Registration failed in component:', err);
        // Try to get specific error messages from backend response
        let errorMessage = 'Η εγγραφή απέτυχε. Παρακαλώ δοκιμάστε ξανά.';
-       if (err.response?.data?.errors) {
+       if (err?.response?.data?.errors) {
          // Example: Concatenate Laravel validation errors
          errorMessage = Object.values(err.response.data.errors).flat().join('\n');
-       } else if (err.response?.data?.message) {
+       } else if (err?.response?.data?.message) {
          errorMessage = err.response.data.message;
        }
       setError(errorMessage);
@@ -90,53 +151,41 @@ const RegisterScreen = ({ navigation }) => {
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {/* Name Input */}
-            <View style={styles.inputContainer}>
-              <Feather name="user" size={20} color={colors.darkGray} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                editable={!isLoading}
-              />
-            </View>
-
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Feather name="mail" size={20} color={colors.darkGray} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!isLoading}
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Feather name="lock" size={20} color={colors.darkGray} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-                disabled={isLoading}
-              >
-                <Feather name={showPassword ? "eye-off" : "eye"} size={20} color={colors.darkGray} />
-              </TouchableOpacity>
-            </View>
+            <AuthInput
+              icon="user"
+              placeholder="Username"
+              value={name}
+              onChangeText={setName}
+              editable={!isLoading}
+              autoCapitalize="words"
+            />
+            <AuthInput
+              icon="mail"
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              editable={!isLoading}
+            />
+            <AuthInput
+              icon="lock"
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              showToggle
+              onToggle={() => setShowPassword((v) => !v)}
+              showValue={showPassword}
+              editable={!isLoading}
+            />
+            <AuthInput
+              icon="lock"
+              placeholder="Confirm Password"
+              value={passwordConfirmation}
+              onChangeText={setPasswordConfirmation}
+              secureTextEntry
+              showToggle={false}
+              editable={!isLoading}
+            />
 
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -261,7 +310,7 @@ const styles = StyleSheet.create({
         color: colors.mediumGray,
     },
     errorText: {
-        color: colors.danger, // Make sure colors.danger is defined
+        color: colors.error,
         textAlign: 'center',
         marginBottom: 10,
         fontSize: 14,

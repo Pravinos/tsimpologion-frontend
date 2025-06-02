@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,59 +15,52 @@ import { Feather } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
 import UserReviewItem from '../components/UserReviewItem';
 import StarRating from '../components/StarRating';
-import { getFoodSpot, getReviews, createReview, updateReview, deleteReview } from '../../services/ApiClient';
+import { createReview, updateReview, deleteReview, getFoodSpot, getReviews } from '../../services/ApiClient';
 import { FoodSpot, Review } from '../../types/models';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
 
 const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { id } = route.params;
   const { token, user } = useAuth();
+  const queryClient = useQueryClient();
   
-  const [foodSpot, setFoodSpot] = useState<FoodSpot | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  // Replace foodSpot state/effect with React Query
+  const {
+    data: foodSpot,
+    isLoading: isLoadingSpot,
+    isError: isSpotError,
+    refetch: refetchSpot,
+  } = useQuery({
+    queryKey: ['foodSpot', id],
+    queryFn: async () => {
+      const response = await getFoodSpot(id);
+      return response.data?.data || response.data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Replace reviews state/effect with React Query
+  const {
+    data: reviews = [],
+    isLoading: isLoadingReviews,
+    isError: isReviewsError,
+    refetch: refetchReviews,
+  } = useQuery({
+    queryKey: ['foodSpotReviews', id],
+    queryFn: async () => {
+      const response = await getReviews(id);
+      return response.data?.data || response.data;
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
   const [reviewText, setReviewText] = useState('');
   const [userRating, setUserRating] = useState(0);
-  const [isLoadingSpot, setIsLoadingSpot] = useState(true);
-  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchFoodSpot();
-    fetchReviews();
-  }, [id]);
-
-  const fetchFoodSpot = async () => {
-    try {
-      setIsLoadingSpot(true);
-      const response = await getFoodSpot(id);
-      // Check if the data is nested inside a data property or directly in the response
-      const spotData = response.data?.data || response.data;
-      setFoodSpot(spotData);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch food spot:', err);
-      setError('Failed to load food spot details.');
-    } finally {
-      setIsLoadingSpot(false);
-    }
-  };
-
-  const fetchReviews = async () => {
-    try {
-      setIsLoadingReviews(true);
-      const response = await getReviews(id);
-      // Handle both paginated and non-paginated responses
-      const reviewsData = response.data?.data || response.data;
-      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-    } catch (err) {
-      console.error('Failed to fetch reviews:', err);
-      // We don't set the main error state here to still show the food spot details
-    } finally {
-      setIsLoadingReviews(false);
-    }
-  };
 
   const handleSubmitReview = async () => {
     if (!token) {
@@ -93,11 +86,9 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
         comment: reviewText,
         user_id: user?.id // Make sure user_id is included
       });
-      
-      // Clear the form and refresh reviews
       setReviewText('');
       setUserRating(0);
-      fetchReviews();      
+      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       Alert.alert('Success', 'Your review has been submitted successfully!');
     } catch (err: any) {
       console.error('Failed to submit review:', err);
@@ -111,7 +102,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
   const handleUpdateReview = async (reviewId: number, data: { rating: number; comment: string }) => {
     try {
       await updateReview(id, reviewId, data);
-      fetchReviews(); // Refresh reviews after update
+      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
     } catch (err: any) {
       console.error('Failed to update review:', err);
       throw err; // Re-throw to let UserReviewItem handle the error display
@@ -121,7 +112,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
   const handleDeleteReview = async (reviewId: number) => {
     try {
       await deleteReview(id, reviewId);
-      fetchReviews(); // Refresh reviews after deletion
+      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
     } catch (err: any) {
       console.error('Failed to delete review:', err);
       throw err; // Re-throw to let UserReviewItem handle the error display
@@ -157,7 +148,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchFoodSpot}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetchSpot()}>
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -234,7 +225,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
             <>
               {/* User's own review section */}
               {(() => {
-                const userReview = reviews.find(review => 
+                const userReview = reviews.find((review: Review) =>
                   review.user_id === user?.id || 
                   (typeof review.user === 'object' && review.user?.id === user?.id)
                 );
@@ -257,7 +248,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
               
               {/* Other users' reviews section */}
               {(() => {
-                const otherReviews = reviews.filter(review => 
+                const otherReviews = reviews.filter((review: Review) =>
                   review.user_id !== user?.id && 
                   !(typeof review.user === 'object' && review.user?.id === user?.id)
                 );
@@ -265,13 +256,13 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                 if (otherReviews.length > 0) {
                   return (
                     <View style={styles.otherReviewsSection}>
-                      {token && reviews.some(review => 
+                      {token && reviews.some((review: Review) =>
                         review.user_id === user?.id || 
                         (typeof review.user === 'object' && review.user?.id === user?.id)
                       ) && (
                         <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
                       )}
-                      {otherReviews.map(review => (
+                      {otherReviews.map((review: Review) => (
                         <ReviewItem 
                           key={review.id} 
                           review={{
@@ -308,7 +299,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
         
         {/* Leave Your Review section - only show if user doesn't have a review yet */}
         {(() => {
-          const userHasReview = token && reviews.some(review => 
+          const userHasReview = token && reviews.some((review: Review) =>
             review.user_id === user?.id || 
             (typeof review.user === 'object' && review.user?.id === user?.id)
           );

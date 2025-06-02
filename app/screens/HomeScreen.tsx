@@ -16,19 +16,9 @@ import { useAuth } from '../../services/AuthProvider';
 import { getFoodSpots } from '../../services/ApiClient';
 import FoodSpotItem from '../components/FoodSpotItem';
 import colors from '../styles/colors';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 
-const CATEGORIES: string[] = [
-  'Restaurant',
-  'Taverna',
-  'Mezedopoleion',
-  'Brunch',
-  'Pizza',
-  'Sushi',
-  'Burgeradiko',
-  'Tsipouradiko',
-];
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
   { label: 'Lowest First', value: 'asc' },
@@ -126,6 +116,7 @@ const FilterModal = ({
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const {
     data: foodSpots = [],
     isLoading: loading,
@@ -140,6 +131,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Dynamically extract unique categories from foodSpots and format them
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    (foodSpots as FoodSpot[]).forEach(spot => {
+      if (spot.category) set.add(spot.category);
+    });
+    // Format: capitalize first letter, replace _ with space
+    return Array.from(set)
+      .map(cat => cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+      .sort();
+  }, [foodSpots]);
 
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -164,8 +167,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [foodSpots, searchText, selectedCategory, sortDirection]);
 
   const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
+  }, [queryClient]);
 
   const navigateToDetail = useCallback((item: FoodSpot) => {
     navigation.navigate('FoodSpotDetail', { id: item.id, name: item.name });
@@ -204,7 +207,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             onPress={() => navigation.navigate('Profile')}
           >
             {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
-              <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.white }} />
+              <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={{ width: 43, height: 43, borderRadius: 20, backgroundColor: colors.white }} />
             ) : (
               <Feather name="user" size={24} color={colors.white} />
             )}
@@ -264,7 +267,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setSelectedCategory={setSelectedCategory}
           sortDirection={sortDirection}
           setSortDirection={setSortDirection}
-          categories={CATEGORIES}
+          categories={categories}
           sortOptions={SORT_OPTIONS}
         />
       </View>
@@ -299,9 +302,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 32,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

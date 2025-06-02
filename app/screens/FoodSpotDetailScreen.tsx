@@ -89,6 +89,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
       setReviewText('');
       setUserRating(0);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
+      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] }); // Refetch spot to update rating
       Alert.alert('Success', 'Your review has been submitted successfully!');
     } catch (err: any) {
       console.error('Failed to submit review:', err);
@@ -188,7 +189,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
               onRatingChange={() => {}} 
             />
             <Text style={styles.ratingText}>
-              {foodSpot.rating ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
+              {foodSpot.rating != null ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
             </Text>
           </View>
           <Text style={styles.category}>
@@ -206,7 +207,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
           <Text style={styles.address}>{foodSpot.address}</Text>
           <TouchableOpacity style={styles.mapButton} onPress={openMap}>
             <Feather name="map" size={16} color={colors.white} />
-            <Text style={styles.mapButtonText}>View on Google Maps</Text>
+            <Text style={styles.mapButtonText}>View on Maps</Text>
           </TouchableOpacity>
         </View>
         

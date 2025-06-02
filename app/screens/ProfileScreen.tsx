@@ -29,15 +29,23 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     data: userProfile,
     isLoading: loading,
     isError: isProfileError,
+    error: profileError,
     refetch: refetchProfile,
   } = useQuery({
     queryKey: ['userProfile', token],
     queryFn: async () => {
-      const response = await getCurrentUser();
-      return response.data?.data || response.data;
+      try {
+        const response = await getCurrentUser();
+        return response.data?.data || response.data;
+      } catch (err) {
+        const error = err as any;
+        console.error('Profile query error:', error.response ? error.response.data : error);
+        throw err;
+      }
     },
     enabled: !!token,
     staleTime: 1000 * 60 * 5,
+    retry: false, // Do not retry on error for debugging
   });
 
   // React Query for user reviews
@@ -110,6 +118,9 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
           <Text style={styles.errorText}>Failed to load profile.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
             <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.error, marginTop: 10 }]} onPress={handleLogout}>
+            <Text style={styles.retryText}>Log Out</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

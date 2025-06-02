@@ -18,7 +18,9 @@ const FoodSpotItem = ({ item, onPress }) => {
         </View>
         <View style={styles.ratingContainer}>
           <StarRating rating={item.rating} size={16} />
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+          <Text style={styles.ratingText}>
+            {item.rating != null ? item.rating.toFixed(1) : 'No ratings'}
+          </Text>
         </View>
       </View>
       <Feather name="chevron-right" size={24} color={colors.darkGray} />

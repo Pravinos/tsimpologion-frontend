@@ -14,7 +14,7 @@ const FoodSpotItem = ({ item, onPress }) => {
         <Text style={styles.name}>{item.name}</Text>
         <View style={styles.row}>
           <Text style={styles.category}>{item.category}</Text>
-          <Text style={styles.city}>{item.city}</Text>
+          {/* Removed city display */}
         </View>
         <View style={styles.ratingContainer}>
           <StarRating rating={item.rating} size={16} />
@@ -68,10 +68,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.darkGray,
     marginRight: 8,
-  },
-  city: {
-    fontSize: 14,
-    color: colors.darkGray,
   },
   ratingContainer: {
     flexDirection: 'row',

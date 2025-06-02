@@ -78,7 +78,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       setName(userProfile.name || '');
       setEmail(userProfile.email || '');
       if (userProfile.images && userProfile.images.length > 0) {
-        setSelectedImage(userProfile.images[0]);
+        // Always store the image as a string (url or filename)
+        const img = userProfile.images[0];
+        setSelectedImage(typeof img === 'string' ? img : img.url || img);
       }
     }
   }, [userProfile]);
@@ -131,7 +133,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       quality: 0.7,
     });
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
-      setSelectedImage({ url: pickerResult.assets[0].uri });
+      setSelectedImage(pickerResult.assets[0].uri); // Always store as string
       setPickerAsset(pickerResult.assets[0]);
     }
   };
@@ -143,7 +145,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       setSaving(true);
       let imageUrl = selectedImage;
       // If a new image is selected and it's a local file, upload it
-      if (selectedImage && (selectedImage.url || typeof selectedImage === 'string' && !selectedImage.startsWith('http'))) {
+      if (selectedImage && (pickerAsset || (typeof selectedImage === 'string' && !selectedImage.startsWith('http')))) {
         // 1. Delete old image if exists
         if (userProfile.images && userProfile.images.length > 0) {
           try {
@@ -156,7 +158,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         const formData = new FormData();
         let fileName = pickerAsset?.fileName;
         let fileType = pickerAsset?.mimeType || pickerAsset?.type;
-        let uri = pickerAsset?.uri || (selectedImage.url || selectedImage);
+        let uri = pickerAsset?.uri || selectedImage;
         if (!fileName) {
           const uriParts = uri.split('/');
           fileName = uriParts[uriParts.length - 1] || 'profile.jpg';
@@ -198,7 +200,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
           imageUrl = uploadRes.data.images[0];
         }
-        setSelectedImage(imageUrl);
+        setSelectedImage(imageUrl && (typeof imageUrl === 'string' ? imageUrl : imageUrl.url || imageUrl));
       }
       const updateData: UpdateData = {
         name: name.trim(),
@@ -210,8 +212,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         updateData.password_confirmation = confirmPassword;
       }
       // Always send images field, even if empty, to satisfy backend validation
-      if (imageUrl) {
-        updateData.images = [imageUrl];
+      if (selectedImage) {
+        updateData.images = [typeof selectedImage === 'string' ? selectedImage : selectedImage.url || selectedImage];
       } else {
         updateData.images = [];
       }
@@ -266,110 +268,101 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
           style={{flex: 1}}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={{flex: 1}}>
-            <ScrollView style={styles.content} contentContainerStyle={{flexGrow: 1}} showsVerticalScrollIndicator={false}>
-              <View style={styles.avatarSection}>
-                <TouchableOpacity onPress={handlePickImage} disabled={saving} style={styles.avatarTouchable}>
-                  {/* Debug: log selectedImage and resolved URL before rendering avatar */}
-                  {selectedImage ? (
-                    <Image source={{ uri: getFullImageUrl(selectedImage) }} style={styles.avatar} />
-                  ) : (
-                    <Feather name="user" size={60} color={colors.primary} />
-                  )}
-                  <View style={styles.cameraIconContainer}>
-                    <Feather name="camera" size={20} color={colors.white} />
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.avatarHint}>Tap to change photo</Text>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Personal Information</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Name</Text>
-                  <TextInput
-                    style={[styles.input, errors.name && styles.inputError]}
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Enter your name"
-                    editable={!saving}
-                  />
-                  {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={[styles.input, errors.email && styles.inputError]}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    editable={!saving}
-                  />
-                  {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-                </View>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Change Password</Text>
-                <Text style={styles.sectionSubtitle}>Leave blank to keep current password</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Current Password</Text>
-                  <TextInput
-                    style={[styles.input, errors.currentPassword && styles.inputError]}
-                    value={currentPassword}
-                    onChangeText={setCurrentPassword}
-                    placeholder="Enter current password"
-                    secureTextEntry
-                    editable={!saving}
-                  />
-                  {errors.currentPassword && <Text style={styles.errorText}>{errors.currentPassword}</Text>}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>New Password</Text>
-                  <TextInput
-                    style={[styles.input, errors.newPassword && styles.inputError]}
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    placeholder="Enter new password"
-                    secureTextEntry
-                    editable={!saving}
-                  />
-                  {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Confirm New Password</Text>
-                  <TextInput
-                    style={[styles.input, errors.confirmPassword && styles.inputError]}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    placeholder="Confirm new password"
-                    secureTextEntry
-                    editable={!saving}
-                  />
-                  {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-                </View>
-              </View>
-            </ScrollView>
-            <View style={styles.footer}>
-              <TouchableOpacity 
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
+          <ScrollView style={styles.content} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
+            <View style={styles.avatarSectionCard}>
+              <TouchableOpacity onPress={handlePickImage} disabled={saving} style={styles.avatarTouchable} activeOpacity={0.85}>
+                {selectedImage ? (
+                  <Image source={{ uri: getFullImageUrl(selectedImage) }} style={styles.avatar} />
                 ) : (
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                  <Feather name="user" size={60} color={colors.primary} />
                 )}
+                <View style={styles.cameraIconContainer}>
+                  <Feather name="camera" size={20} color={colors.white} />
+                </View>
               </TouchableOpacity>
+              <Text style={styles.avatarHint}>Tap to change photo</Text>
             </View>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Personal Information</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  style={[styles.input, errors.name && styles.inputError]}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter your name"
+                  editable={!saving}
+                />
+                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!saving}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              </View>
+            </View>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Change Password</Text>
+              <Text style={styles.sectionSubtitle}>Leave blank to keep current password</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Current Password</Text>
+                <TextInput
+                  style={[styles.input, errors.currentPassword && styles.inputError]}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  secureTextEntry
+                  editable={!saving}
+                />
+                {errors.currentPassword && <Text style={styles.errorText}>{errors.currentPassword}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>New Password</Text>
+                <TextInput
+                  style={[styles.input, errors.newPassword && styles.inputError]}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password"
+                  secureTextEntry
+                  editable={!saving}
+                />
+                {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm New Password</Text>
+                <TextInput
+                  style={[styles.input, errors.confirmPassword && styles.inputError]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm new password"
+                  secureTextEntry
+                  editable={!saving}
+                />
+                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+              </View>
+            </View>
+          </ScrollView>
+          <View style={styles.footer}>
+            <TouchableOpacity 
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -407,10 +400,19 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0, // Remove extra padding
   },
   section: {
-    marginTop: 24,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 13,
+    marginBottom: 18,
+    padding: 20,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -435,11 +437,12 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.mediumGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.lightGray,
+    color: colors.black,
   },
   inputError: {
     borderColor: colors.error,
@@ -456,17 +459,23 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.13,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveButtonDisabled: {
     backgroundColor: colors.mediumGray,
   },
   saveButtonText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flex: 1,
@@ -479,25 +488,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.darkGray,
   },
-  avatarSection: {
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 8,
+  avatarSectionCard: {
+   backgroundColor: colors.primary,
+       alignItems: 'center',
+       paddingVertical: 36,
+       paddingHorizontal: 20,
+  },
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginTop: -24,
+    marginBottom: 18,
+    padding: 20,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   avatarTouchable: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: colors.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 106,
+    height: 106,
+    borderRadius: 53,
   },
   cameraIconContainer: {
     position: 'absolute',
@@ -506,10 +536,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarHint: {
     fontSize: 13,
-    color: colors.darkGray,
+    color: colors.white,
     marginBottom: 8,
   },
 });

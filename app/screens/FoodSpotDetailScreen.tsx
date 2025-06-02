@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -8,10 +8,12 @@ import {
   TextInput,
   Linking,
   ActivityIndicator,
-  Alert
+  Alert,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
 import UserReviewItem from '../components/UserReviewItem';
 import StarRating from '../components/StarRating';
@@ -26,6 +28,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
   const { id } = route.params;
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // Replace foodSpot state/effect with React Query
   const {
@@ -175,192 +178,357 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.iconBackground}>
-            <Feather name="map-pin" size={30} color={colors.primary} />
-          </View>
-          <Text style={styles.name}>{foodSpot.name}</Text>        
-          <View style={styles.ratingContainer}>
-            <StarRating 
-              rating={foodSpot.rating || 0} 
-              size={18} 
-              selectable={false} 
-              onRatingChange={() => {}} 
-            />
-            <Text style={styles.ratingText}>
-              {foodSpot.rating != null ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+          ref={scrollViewRef}
+        >
+          <View style={styles.header}>
+            <View style={styles.iconBackground}>
+              <Feather name="map-pin" size={30} color={colors.primary} />
+            </View>
+            <Text style={styles.name}>{foodSpot.name}</Text>        
+            <View style={styles.ratingContainer}>
+              <StarRating 
+                rating={foodSpot.rating || 0} 
+                size={18} 
+                selectable={false} 
+                onRatingChange={() => {}} 
+              />
+              <Text style={styles.ratingText}>
+                {foodSpot.rating != null ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
+              </Text>
+            </View>
+            <Text style={styles.category}>
+              {foodSpot.category} {foodSpot.price_range ? `· ${foodSpot.price_range}` : ''}
             </Text>
           </View>
-          <Text style={styles.category}>
-            {foodSpot.category} · {foodSpot.city}
-          </Text>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.description}>{foodSpot.description}</Text>
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
-          <Text style={styles.address}>{foodSpot.address}</Text>
-          <TouchableOpacity style={styles.mapButton} onPress={openMap}>
-            <Feather name="map" size={16} color={colors.white} />
-            <Text style={styles.mapButtonText}>View on Maps</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.section}>
-          <View style={styles.reviewHeader}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
-            <Text style={styles.reviewCount}>{reviews.length} Reviews</Text>
+          {/* Address & Info Link & Phone */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Details</Text>
+            {/* Address Row */}
+            {foodSpot.address && (
+              <View style={styles.detailRow}>
+                <MaterialIcons name="location-on" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.address}>{foodSpot.address}</Text>
+              </View>
+            )}
+            {/* Phone Row */}
+            {foodSpot.phone && (
+              <TouchableOpacity style={styles.detailRow} onPress={() => Linking.openURL(`tel:${foodSpot.phone}`)}>
+                <MaterialIcons name="phone" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                <Text style={[styles.address, { color: colors.primary, textDecorationLine: 'underline' }]}>{foodSpot.phone}</Text>
+              </TouchableOpacity>
+            )}
+            {/* Info Link Row (See location on map) */}
+            {(foodSpot.info_link || foodSpot.address) && (
+              <TouchableOpacity style={styles.detailRow} onPress={openMap}>
+                <MaterialIcons name="map" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                <Text style={[styles.address, { color: colors.primary, textDecorationLine: 'underline' }]}>See location on map</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          
-          {isLoadingReviews ? (
-            <View style={styles.loadingReviewsContainer}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading reviews...</Text>
+
+          {/* Description */}
+          {foodSpot.description && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.description}>{foodSpot.description}</Text>
             </View>
-          ) : (
-            <>
-              {/* User's own review section */}
+          )}
+
+          {/* Business Hours */}
+          {foodSpot.business_hours && (
+            <View style={styles.section}>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12}}>
+                <Text style={[styles.sectionTitle, {flex: 1, marginBottom: 0}]}>Business Hours</Text>
+                {(() => {
+                  let hours = foodSpot.business_hours;
+                  if (typeof hours === 'string') {
+                    try { hours = JSON.parse(hours); } catch {}
+                  }
+                  // Determine open/closed
+                  let isOpen = false;
+                  const todayIdx = new Date().getDay();
+                  const todayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][todayIdx];
+                  let todayRange = null;
+                  if (typeof hours === 'object' && hours !== null) {
+                    const dayMap: Record<string, string> = {
+                      'mon': 'monday', 'tue': 'tuesday', 'wed': 'wednesday', 'thu': 'thursday', 'fri': 'friday', 'sat': 'saturday', 'sun': 'sunday'
+                    };
+                    const dayOrder = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+                    const dayHours: Record<string, string> = {};
+                    Object.entries(hours).forEach(([key, value]) => {
+                      if (key.includes('-')) {
+                        // Range like mon-fri
+                        const [start, end] = key.split('-');
+                        const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] as string);
+                        const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] as string);
+                        for (let i = startIdx; i <= endIdx; i++) {
+                          dayHours[dayOrder[i]] = value as string;
+                        }
+                      } else {
+                        // Single day
+                        const d = dayMap[key.slice(0,3)] || key;
+                        dayHours[d] = value as string;
+                      }
+                    });
+                    todayRange = dayHours[todayKey];
+                    // Open/closed logic for today
+                    if (todayRange) {
+                      const now = new Date();
+                      const hour = now.getHours();
+                      const minute = now.getMinutes();
+                      const [from, to] = todayRange.split('-');
+                      const [fromH, fromM] = from.split(':').map(Number);
+                      const [toH, toM] = to.split(':').map(Number);
+                      const nowMins = hour * 60 + minute;
+                      const fromMins = fromH * 60 + fromM;
+                      let toMins = toH * 60 + toM;
+                      if (toMins <= fromMins) toMins += 24 * 60;
+                      if (nowMins >= fromMins && nowMins < toMins) isOpen = true;
+                      if (!isOpen && toMins > 24 * 60 && nowMins < (toMins - 24 * 60)) isOpen = true;
+                    }
+                    return (
+                      <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 10}}>
+                        <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: isOpen ? '#2ecc40' : '#e74c3c', marginRight: 6}} />
+                        <Text style={{color: isOpen ? '#2ecc40' : '#e74c3c', fontWeight: 'bold'}}>{isOpen ? 'Open now' : 'Closed'}</Text>
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
+              </View>
               {(() => {
-                const userReview = reviews.find((review: Review) =>
-                  review.user_id === user?.id || 
-                  (typeof review.user === 'object' && review.user?.id === user?.id)
-                );
-                
-                if (userReview && token) {
-                  return (
-                    <View style={styles.userReviewSection}>
-                      <Text style={styles.userReviewTitle}>Your Review</Text>
-                      <UserReviewItem 
-                        key={userReview.id}
-                        review={userReview}
-                        onUpdate={handleUpdateReview}
-                        onDelete={handleDeleteReview}
-                      />
-                    </View>
-                  );
+                let hours = foodSpot.business_hours;
+                if (typeof hours === 'string') {
+                  try { hours = JSON.parse(hours); } catch {}
                 }
-                return null;
-              })()}
-              
-              {/* Other users' reviews section */}
-              {(() => {
-                const otherReviews = reviews.filter((review: Review) =>
-                  review.user_id !== user?.id && 
-                  !(typeof review.user === 'object' && review.user?.id === user?.id)
-                );
-                
-                if (otherReviews.length > 0) {
+                if (typeof hours === 'object' && hours !== null) {
+                  const dayMap: Record<string, string> = {
+                    'mon': 'monday', 'tue': 'tuesday', 'wed': 'wednesday', 'thu': 'thursday', 'fri': 'friday', 'sat': 'saturday', 'sun': 'sunday'
+                  };
+                  const dayOrder = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+                  const dayHours: Record<string, string> = {};
+                  Object.entries(hours).forEach(([key, value]) => {
+                    if (key.includes('-')) {
+                      // Range like mon-fri
+                      const [start, end] = key.split('-');
+                      const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] as string);
+                      const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] as string);
+                      for (let i = startIdx; i <= endIdx; i++) {
+                        dayHours[dayOrder[i]] = value as string;
+                      }
+                    } else {
+                      // Single day
+                      const d = dayMap[key.slice(0,3)] || key;
+                      dayHours[d] = value as string;
+                    }
+                  });
+                  const todayIdx = new Date().getDay();
+                  const todayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][todayIdx];
                   return (
-                    <View style={styles.otherReviewsSection}>
-                      {token && reviews.some((review: Review) =>
-                        review.user_id === user?.id || 
-                        (typeof review.user === 'object' && review.user?.id === user?.id)
-                      ) && (
-                        <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
-                      )}
-                      {otherReviews.map((review: Review) => (
-                        <ReviewItem 
-                          key={review.id} 
-                          review={{
-                            ...review,
-                            // Ensure user property has expected format for ReviewItem
-                            user: review.user?.name || 'Unknown User'
-                          }} 
-                        />
+                    <View style={styles.hoursCard}>
+                      {dayOrder.map((day) => (
+                        <View key={day} style={[styles.hoursRow, todayKey === day && styles.hoursRowToday]}> 
+                          <Text style={[styles.hoursDay, todayKey === day && styles.hoursDayToday]}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
+                          <Text style={styles.hoursTime}>{dayHours[day] ? dayHours[day] : 'Closed'}</Text>
+                        </View>
                       ))}
                     </View>
                   );
                 }
-                
-                // Show message if no other reviews exist
-                if (reviews.length === 0 || 
-                    (reviews.length === 1 && (
-                      reviews[0].user_id === user?.id || 
-                      (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)
-                    ))) {
-                  return (
-                    <Text style={styles.noReviewsText}>
-                      {reviews.length === 0 
-                        ? "No reviews yet. Be the first to leave a review!" 
-                        : "No other reviews yet."}
-                    </Text>
-                  );
-                }
-                
                 return null;
               })()}
-            </>
-          )}
-        </View>
-        
-        {/* Leave Your Review section - only show if user doesn't have a review yet */}
-        {(() => {
-          const userHasReview = token && reviews.some((review: Review) =>
-            review.user_id === user?.id || 
-            (typeof review.user === 'object' && review.user?.id === user?.id)
-          );
-          
-          if (userHasReview) {
-            return null; // Don't show the form if user already has a review
-          }
-          
-          return (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Leave Your Review</Text>
-              
-              {!token ? (
-                <View style={styles.loginPrompt}>
-                  <Text style={styles.loginPromptText}>
-                    Please log in to leave a review
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.loginButton}
-                    onPress={() => navigation.navigate('Profile')}
-                  >
-                    <Text style={styles.loginButtonText}>Log In</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.ratingSelector}>
-                    <Text style={styles.ratingLabel}>Rating:</Text>
-                    <StarRating 
-                      rating={userRating} 
-                      size={24} 
-                      selectable={true}
-                      onRatingChange={setUserRating} 
-                    />
-                  </View>
-                  <TextInput
-                    style={styles.reviewInput}
-                    placeholder="Share your experience..."
-                    multiline
-                    value={reviewText}
-                    onChangeText={setReviewText}
-                    editable={!isSubmitting}
-                  />
-                  <TouchableOpacity 
-                    style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-                    onPress={handleSubmitReview}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    ) : (
-                      <Text style={styles.submitButtonText}>SUBMIT</Text>
-                    )}
-                  </TouchableOpacity>
-                </>
-              )}
             </View>
-          );
-        })()}
-      </ScrollView>
+          )}
+
+          {/* Social Links */}
+          {foodSpot.social_links && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Social Links</Text>
+              {(() => {
+                let links = foodSpot.social_links;
+                if (typeof links === 'string') {
+                  try { links = JSON.parse(links); } catch {}
+                }
+                if (typeof links === 'object' && links !== null) {
+                  return Object.entries(links).map(([key, value]) => (
+                    <TouchableOpacity key={key} onPress={() => Linking.openURL(String(value))} style={{flexDirection: 'row', alignItems: 'center', marginBottom: 6}}>
+                      <Feather name={key === 'facebook' ? 'facebook' : key === 'instagram' ? 'instagram' : 'link'} size={16} color={colors.primary} />
+                      <Text style={{color: colors.primary, marginLeft: 6, textDecorationLine: 'underline'}}>{key.charAt(0).toUpperCase() + key.slice(1)}</Text>
+                    </TouchableOpacity>
+                  ));
+                }
+                return null;
+              })()}
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <View style={styles.reviewHeader}>
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              <Text style={styles.reviewCount}>{reviews.length} Reviews</Text>
+            </View>
+            
+            {isLoadingReviews ? (
+              <View style={styles.loadingReviewsContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>Loading reviews...</Text>
+              </View>
+            ) : (
+              <>
+                {/* User's own review section */}
+                {(() => {
+                  const userReview = reviews.find((review: Review) =>
+                    review.user_id === user?.id || 
+                    (typeof review.user === 'object' && review.user?.id === user?.id)
+                  );
+                  
+                  if (userReview && token) {
+                    return (
+                      <View style={styles.userReviewSection}>
+                        <Text style={styles.userReviewTitle}>Your Review</Text>
+                        <UserReviewItem 
+                          key={userReview.id}
+                          review={userReview}
+                          onUpdate={handleUpdateReview}
+                          onDelete={handleDeleteReview}
+                        />
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                {/* Other users' reviews section */}
+                {(() => {
+                  const otherReviews = reviews.filter((review: Review) =>
+                    review.user_id !== user?.id && 
+                    !(typeof review.user === 'object' && review.user?.id === user?.id)
+                  );
+                  
+                  if (otherReviews.length > 0) {
+                    return (
+                      <View style={styles.otherReviewsSection}>
+                        {token && reviews.some((review: Review) =>
+                          review.user_id === user?.id || 
+                          (typeof review.user === 'object' && review.user?.id === user?.id)
+                        ) && (
+                          <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
+                        )}
+                        {otherReviews.map((review: Review) => (
+                          <ReviewItem 
+                            key={review.id} 
+                            review={{
+                              ...review,
+                              // Ensure user property has expected format for ReviewItem
+                              user: review.user?.name || 'Unknown User'
+                            }} 
+                          />
+                        ))}
+                      </View>
+                    );
+                  }
+                  
+                  // Show message if no other reviews exist
+                  if (reviews.length === 0 || 
+                      (reviews.length === 1 && (
+                        reviews[0].user_id === user?.id || 
+                        (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)
+                      ))) {
+                    return (
+                      <Text style={styles.noReviewsText}>
+                        {reviews.length === 0 
+                          ? "No reviews yet. Be the first to leave a review!" 
+                          : "No other reviews yet."}
+                      </Text>
+                    );
+                  }
+                  
+                  return null;
+                })()}
+              </>
+            )}
+          </View>
+          
+          {/* Leave Your Review section - only show if user doesn't have a review yet */}
+          {(() => {
+            const userHasReview = token && reviews.some((review: Review) =>
+              review.user_id === user?.id || 
+              (typeof review.user === 'object' && review.user?.id === user?.id)
+            );
+            
+            if (userHasReview) {
+              return null; // Don't show the form if user already has a review
+            }
+            
+            return (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Leave Your Review</Text>
+                
+                {!token ? (
+                  <View style={styles.loginPrompt}>
+                    <Text style={styles.loginPromptText}>
+                      Please log in to leave a review
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.loginButton}
+                      onPress={() => navigation.navigate('Profile')}
+                    >
+                      <Text style={styles.loginButtonText}>Log In</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.ratingSelector}>
+                      <Text style={styles.ratingLabel}>Rating:</Text>
+                      <StarRating 
+                        rating={userRating} 
+                        size={24} 
+                        selectable={true}
+                        onRatingChange={setUserRating} 
+                      />
+                    </View>
+                    <TextInput
+                      style={styles.reviewInput}
+                      placeholder="Share your experience..."
+                      multiline
+                      value={reviewText}
+                      onChangeText={setReviewText}
+                      editable={!isSubmitting}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          if (scrollViewRef.current) {
+                            scrollViewRef.current.scrollToEnd({ animated: true });
+                          }
+                        }, 200);
+                      }}
+                    />
+                    <TouchableOpacity 
+                      style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                      onPress={handleSubmitReview}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                      ) : (
+                        <Text style={styles.submitButtonText}>SUBMIT</Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            );
+          })()}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -415,9 +583,16 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
   section: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 13,
+    marginBottom: 18,
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lightGray,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -429,10 +604,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.black,
   },
+  // Add a shared row style for details (address, phone, info_link)
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6, // tighter spacing
+  },
   address: {
     fontSize: 16,
     color: colors.black,
-    marginBottom: 10,
+    // marginBottom removed for tighter, consistent spacing
   },
   mapButton: {
     flexDirection: 'row',
@@ -572,6 +753,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     color: colors.black,
+  },
+  hoursCard: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 2,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  hoursRowToday: {
+    backgroundColor: '#e6f9ed', // subtle green highlight
+    borderRadius: 6,
+  },
+  hoursDay: {
+    fontWeight: 'bold',
+    color: colors.darkGray,
+    fontSize: 15,
+  },
+  hoursDayToday: {
+    color: '#2ecc40',
+  },
+  hoursTime: {
+    color: colors.black,
+    fontSize: 15,
   },
 });
 

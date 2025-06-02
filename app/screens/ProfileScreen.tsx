@@ -39,7 +39,10 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
         return response.data?.data || response.data;
       } catch (err) {
         const error = err as any;
-        console.error('Profile query error:', error.response ? error.response.data : error);
+        // Only log error if not 401 (Unauthenticated)
+        if (error.response?.status !== 401) {
+          console.error('Profile query error:', error.response ? error.response.data : error);
+        }
         throw err;
       }
     },
@@ -144,25 +147,25 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={{flex: 1}}>
-        <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1}}>
-          <View style={styles.header}>
-            <View style={styles.avatarContainer}>
-              {userProfile?.images && userProfile.images.length > 0 ? (
-                <Image 
-                  source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
-                  style={styles.avatar} 
-                />
-              ) : (
-                <Feather name="user" size={40} color={colors.white} />
-              )}
+        <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
+          <View style={styles.headerShadow}>
+            <View style={styles.headerCard}>
+              <View style={styles.avatarContainer}>
+                {userProfile?.images && userProfile.images.length > 0 ? (
+                  <Image 
+                    source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
+                    style={styles.avatar} 
+                  />
+                ) : (
+                  <Feather name="user" size={40} color={colors.white} />
+                )}
+              </View>
+              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.role}>{displayRole}</Text>
             </View>
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.role}>{displayRole}</Text>
           </View>
-          
-          <View style={styles.infoSection}>
+          <View style={styles.infoSectionCard}>
             <Text style={styles.sectionTitle}>Account Information</Text>
-
             <View style={styles.infoItem}>
               <Feather name="mail" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>
@@ -170,7 +173,6 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
                 <Text style={styles.infoValue}>{displayEmail}</Text>
               </View>
             </View>
-
             <View style={styles.infoItem}>
               <Feather name="calendar" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>
@@ -178,7 +180,6 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
                 <Text style={styles.infoValue}>{displayJoinDate}</Text>
               </View>
             </View>
-
             <View style={styles.infoItem}>
               <Feather name="message-square" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>
@@ -188,7 +189,6 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
                 </Text>
               </View>
             </View>
-            
             {userProfile?.role === 'spot_owner' && (
               <View style={styles.infoItem}>
                 <Feather name="home" size={20} color={colors.primary} style={styles.infoIcon} />
@@ -205,45 +205,29 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
               </View>
             )}
           </View>
-          
-          <View style={styles.actionsSection}>
+          <View style={styles.actionsSectionCard}>
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => navigation.navigate('EditProfile')}
+              activeOpacity={0.85}
             >
               <Feather name="edit-2" size={20} color={colors.primary} style={styles.actionIcon} />
               <Text style={styles.actionText}>Edit Profile</Text>
             </TouchableOpacity>
-
             {userProfile?.role === 'spot_owner' && (
               <TouchableOpacity 
                 style={styles.actionButton}
                 onPress={() => navigation.navigate('AddFoodSpot')}
+                activeOpacity={0.85}
               >
                 <Feather name="plus-circle" size={20} color={colors.primary} style={styles.actionIcon} />
                 <Text style={styles.actionText}>Add Business</Text>
               </TouchableOpacity>
             )}
-
-            {/* <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('Settings')}
-            >
-              <Feather name="settings" size={20} color={colors.primary} style={styles.actionIcon} />
-              <Text style={styles.actionText}>Settings</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('Help')}
-            >
-              <Feather name="help-circle" size={20} color={colors.primary} style={styles.actionIcon} />
-              <Text style={styles.actionText}>Help & Support</Text>
-            </TouchableOpacity> */}
-
             <TouchableOpacity
               style={[styles.actionButton, styles.logoutButton]}
               onPress={handleLogout}
+              activeOpacity={0.85}
             >
               <Feather name="log-out" size={20} color={colors.error} style={styles.actionIcon} />
               <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
@@ -266,41 +250,80 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerShadow: {
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    backgroundColor: 'transparent',
+  },
+  headerCard: {
     backgroundColor: colors.primary,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
     alignItems: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 20,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.white,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
   },
   name: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: colors.white,
-    marginBottom: 5,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.08)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   role: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.white,
-    opacity: 0.8,
+    opacity: 0.85,
+    marginBottom: 2,
   },
-  infoSection: {
+  infoSectionCard: {
     backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginTop: -24,
+    marginBottom: 18,
     padding: 20,
-    marginBottom: 10,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionsSectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginBottom: 18,
+    padding: 10,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -330,17 +353,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textDecorationLine: 'underline',
   },
-  actionsSection: {
-    backgroundColor: colors.white,
-    padding: 20,
-    marginBottom: 20,
-  },
   actionButton: {
     flexDirection: 'row',
-    paddingVertical: 15,
+    paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
     alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    marginBottom: 2,
   },
   actionIcon: {
     marginRight: 15,
@@ -348,12 +369,16 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 16,
     color: colors.black,
+    fontWeight: '500',
   },
   logoutButton: {
     borderBottomWidth: 0,
+    marginTop: 8,
+    backgroundColor: 'rgba(255,0,0,0.04)',
   },
   logoutText: {
     color: colors.error,
+    fontWeight: 'bold',
   },
   footer: {
     alignItems: 'center',

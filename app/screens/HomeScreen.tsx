@@ -5,7 +5,6 @@ import {
   Text, 
   FlatList, 
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -18,6 +17,7 @@ import FoodSpotItem from '../components/FoodSpotItem';
 import colors from '../styles/colors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
@@ -192,7 +192,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>        
         <View style={styles.header}>
           <View>
@@ -282,14 +282,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    paddingTop: 10, // Add extra padding to push content down from the top
+    // paddingTop: 10, // Remove manual top padding, SafeAreaView handles this
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
-    marginTop: 8, // Add margin to push header down from status bar
+    // marginTop: 8, // Remove manual top margin, SafeAreaView handles this
   },
   welcome: {
     fontSize: 16,
@@ -458,6 +458,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  section: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 13,
+    marginBottom: 18,
+    padding: 20,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
 });
 

@@ -102,7 +102,13 @@ export const logout = async () => {
   try {
     await post('/logout');
   } catch (error) {
-    console.error('Backend logout failed:', error);
+    // Only log if not a 401 (unauthenticated)
+    if (error.response?.status !== 401) {
+      console.error('Backend logout failed:', error);
+    } else {
+      // Optionally, log at debug level or ignore
+      console.log('Backend logout 401 (already unauthenticated), ignoring.');
+    }
   } finally {
     await removeToken();
   }

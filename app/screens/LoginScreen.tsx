@@ -43,33 +43,45 @@ const AuthInput: React.FC<AuthInputProps> = ({
   onToggle,
   showValue = false,
   editable = true,
-}) => (
-  <View style={styles.inputContainer}>
-    <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
-    <TextInput
-      style={styles.input}
-      placeholder={placeholder}
-      value={value}
-      onChangeText={onChangeText}
-      secureTextEntry={secureTextEntry && !showValue}
-      autoCapitalize="none"
-      editable={editable}
-    />
-    {showToggle && onToggle && (
-      <TouchableOpacity
-        onPress={onToggle}
-        style={styles.eyeIcon}
-        disabled={!editable}
-      >
-        <Feather
-          name={showValue ? 'eye-off' : 'eye'}
-          size={20}
-          color={colors.darkGray}
-        />
-      </TouchableOpacity>
-    )}
-  </View>
-);
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <View
+      style={[
+        styles.inputContainer,
+        isFocused && styles.inputContainerFocused,
+        !editable && styles.inputContainerDisabled,
+      ]}
+    >
+      <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
+      <TextInput
+        style={[styles.input, { color: '#000' }]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.darkGray}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry && !showValue}
+        autoCapitalize="none"
+        editable={editable}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+      />
+      {showToggle && onToggle && (
+        <TouchableOpacity
+          onPress={onToggle}
+          style={styles.eyeIcon}
+          disabled={!editable}
+        >
+          <Feather
+            name={showValue ? 'eye-off' : 'eye'}
+            size={20}
+            color={colors.darkGray}
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -103,20 +115,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.logoContainer}>
             <Image
               source={require('../assets/tsimpologo.png')}
-              style={{ width: 100, height: 100 }}
+              style={styles.logoImage}
               resizeMode="contain"
             />
             <Text style={styles.appName}>Tsimpologion</Text>
             <Text style={styles.tagline}>Find Your Dish, Wherever You Are!</Text>
           </View>
-
           <View style={styles.formContainer}>
             <Text style={styles.title}>Welcome!</Text>
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error && (
+              <View style={styles.errorBox}>
+                <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             <AuthInput
               icon="mail"
               placeholder="Email"
@@ -139,6 +155,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
+              activeOpacity={0.85}
             >
               {isLoading ? (
                 <ActivityIndicator color={colors.white} />
@@ -148,7 +165,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading} style={styles.registerLinkContainer}>
+                <Feather name="user-plus" size={16} color={isLoading ? colors.mediumGray : colors.primary} style={{ marginRight: 2 }} />
                 <Text style={[styles.registerLink, isLoading && styles.linkDisabled]}>Register</Text>
               </TouchableOpacity>
             </View>
@@ -207,41 +225,88 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.mediumGray,
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 10,
-    height: 50,
+    borderRadius: 12,
+    marginBottom: 18,
+    paddingHorizontal: 14,
+    height: 52,
+    backgroundColor: colors.lightGray,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  inputContainerFocused: {
+    borderColor: colors.primary,
+    backgroundColor: '#fff',
+    shadowOpacity: 0.12,
+    elevation: 2,
+  },
+  inputContainerDisabled: {
+    opacity: 0.7,
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    height: '100%',    fontSize: 16,
-    color: colors.black,
+    height: '100%',
+    fontSize: 16,
+    color: '#000',
+    backgroundColor: 'transparent',
   },
   eyeIcon: {
     padding: 5,
   },
   button: {
     backgroundColor: colors.primary,
-    borderRadius: 8,
-    height: 50,
+    borderRadius: 12,
+    height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.13,
+    shadowRadius: 4,
+    elevation: 2,
+    transform: [{ scale: 1 }],
   },
   buttonDisabled: {
-    backgroundColor: colors.mediumGray,  },
+    backgroundColor: colors.mediumGray,
+  },
   buttonText: {
     color: colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff6f6',
+    borderColor: colors.error,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10,
+    marginTop: -10,
+  },
+  errorText: {
+    color: colors.error,
+    textAlign: 'left',
+    fontSize: 14,
+    flex: 1,
+  },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  registerLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 2,
   },
   registerText: {
     color: colors.darkGray,
@@ -254,11 +319,17 @@ const styles = StyleSheet.create({
   },
   linkDisabled: {
     color: colors.mediumGray,  },
-  errorText: {
-    color: colors.error,
-    textAlign: 'center',
-    marginBottom: 10,
-    fontSize: 14,
+  logoImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 24,
+    backgroundColor: colors.lightGray,
+    marginBottom: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
 

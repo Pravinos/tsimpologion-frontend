@@ -1,50 +1,52 @@
-# Welcome to your Expo app 👋
+# Tsimpologion 🍽️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern React Native app (built with [Expo](https://expo.dev)) for discovering and reviewing food spots. 
 
-## Get started
+## Features
 
-1. Install dependencies
+- 🔐 **User Authentication**: Register, log in, and log out securely.
+- 👤 **Profile Management**: Edit your profile, change your password, and upload an avatar.
+- 🍴 **Food Spot Discovery**: Browse, filter, and sort food spots by category and rating.
+- 🗺️ **Food Spot Details**: View address, business hours, contact info, social links, and more.
+- ⭐ **Community Reviews**: Add, edit, and delete reviews with ratings and images.
+- 🖼️ **Image Uploads**: Upload images for your profile and reviews.
+- ⚡ **Fast Data Fetching**: Powered by React Query for caching and performance.
+- 🗂️ **File-based Routing**: Easy navigation using Expo Router.
+- 🎨 **Modern UI**: Clean, responsive design with custom components.
+
+## Architecture
+
+This React Native app communicates with a [Laravel](https://laravel.com/) backend via a RESTful API for authentication, data storage, and business logic. Make sure the backend is running and accessible for full functionality.
+
+You can find the backend [here](https://github.com/Pravinos/tsimpologion-backend).
+
+## Getting Started
+
+1. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. **Start the app**
 
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+   Then choose to open in a development build, Android emulator, iOS simulator, or [Expo Go](https://expo.dev/go).
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+3. **Develop**
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   Edit files in the `app` directory. Routing is file-based ([docs](https://docs.expo.dev/router/introduction/)).
 
-## Get a fresh project
+## Learn More
 
-When you're ready, run:
+- [Expo documentation](https://docs.expo.dev/)
+- [React Native documentation](https://reactnative.dev/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
 
-```bash
-npm run reset-project
-```
+## Community
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo on GitHub](https://github.com/expo/expo)
+- [Expo Discord](https://chat.expo.dev)

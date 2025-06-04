@@ -16,6 +16,7 @@ import {
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
 import UserReviewItem from '../components/UserReviewItem';
@@ -26,6 +27,11 @@ import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
+import FoodSpotHeader from '../components/FoodSpotHeader';
+import FoodSpotDetailsSection from '../components/FoodSpotDetailsSection';
+import FoodSpotAboutSection from '../components/FoodSpotAboutSection';
+import FoodSpotBusinessHoursSection from '../components/FoodSpotBusinessHoursSection';
+import FoodSpotSocialLinksSection from '../components/FoodSpotSocialLinksSection';
 
 const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { id } = route.params;
@@ -63,14 +69,6 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     staleTime: 1000 * 60 * 2,
   });
 
-// DEBUG: Print the full reviews array to inspect image structure
-// (must be inside the component, after reviews is defined)
-React.useEffect(() => {
-  if (__DEV__) {
-    // eslint-disable-next-line no-console
-    console.log('FULL REVIEWS:', JSON.stringify(reviews, null, 2));
-  }
-}, [reviews]);
 
   const [reviewText, setReviewText] = useState('');
   const [userRating, setUserRating] = useState(0);
@@ -262,11 +260,7 @@ React.useEffect(() => {
     );
   }
 
-  // DEBUG: Print review images structure
-  if (__DEV__) {
-    // eslint-disable-next-line no-console
-    console.log('Review images:', JSON.stringify((reviews || []).map((r: any) => r.images)));
-  }
+  // (Debug logs removed)
   // Collect all review images for the carousel (ensure all are URLs)
   const allReviewImages = (reviews || [])
     .flatMap((r: Review) => (Array.isArray(r.images) ? r.images : []))
@@ -285,68 +279,39 @@ React.useEffect(() => {
           keyboardShouldPersistTaps="handled"
           ref={scrollViewRef}
         >
-          <View style={styles.header}>
-            <View style={styles.iconBackground}>
-              <Feather name="map-pin" size={30} color={colors.primary} />
-            </View>
-            <Text style={styles.name}>{foodSpot.name}</Text>
-            <View style={styles.ratingContainer}>
-              <StarRating
-                rating={foodSpot.rating || 0}
-                size={18}
-                selectable={false}
-                onRatingChange={() => {}}
-              />
-              <Text style={styles.ratingText}>
-                {foodSpot.rating != null ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
-              </Text>
-            </View>
-            <Text style={styles.category}>
-              {foodSpot.category} {foodSpot.price_range ? `· ${foodSpot.price_range}` : ''}
-            </Text>
-          </View>
+          <FoodSpotHeader
+            name={foodSpot.name}
+            rating={foodSpot.rating}
+            category={foodSpot.category}
+            price_range={foodSpot.price_range}
+          />
 
           {/* Review Images Carousel */}
           {allReviewImages.length > 0 && (
             <ReviewImagesCarousel images={allReviewImages} />
           )}
 
-          {/* Address & Info Link & Phone */}
+          {/* Details Card */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
-            {/* Address Row */}
-            {foodSpot.address && (
-              <View style={styles.detailRow}>
-                <MaterialIcons name="location-on" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={styles.address}>{foodSpot.address}</Text>
-              </View>
-            )}
-            {/* Phone Row */}
-            {foodSpot.phone && (
-              <TouchableOpacity style={styles.detailRow} onPress={() => Linking.openURL(`tel:${foodSpot.phone}`)}>
-                <MaterialIcons name="phone" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={[styles.address, { color: colors.primary, textDecorationLine: 'underline' }]}>{foodSpot.phone}</Text>
-              </TouchableOpacity>
-            )}
-            {/* Info Link Row (See location on map) */}
-            {(foodSpot.info_link || foodSpot.address) && (
-              <TouchableOpacity style={styles.detailRow} onPress={openMap}>
-                <MaterialIcons name="map" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={[styles.address, { color: colors.primary, textDecorationLine: 'underline' }]}>See location on map</Text>
-              </TouchableOpacity>
-            )}
+            <FoodSpotDetailsSection
+              address={foodSpot.address}
+              distance={foodSpot.distance}
+              phone={foodSpot.phone}
+              website={foodSpot.info_link}
+            />
           </View>
 
-          {/* Description */}
-          {foodSpot.description && (
+          {/* About Card */}
+          {foodSpot.description ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
-              <Text style={styles.description}>{foodSpot.description}</Text>
+              <FoodSpotAboutSection about={foodSpot.description} />
             </View>
-          )}
+          ) : null}
 
-          {/* Business Hours */}
-          {foodSpot.business_hours && (
+          {/* Business Hours Card with Open Now indicator */}
+          {foodSpot.business_hours ? (
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12}}>
                 <Text style={[styles.sectionTitle, {flex: 1, marginBottom: 0}]}>Business Hours</Text>
@@ -355,7 +320,6 @@ React.useEffect(() => {
                   if (typeof hours === 'string') {
                     try { hours = JSON.parse(hours); } catch {}
                   }
-                  // Determine open/closed
                   let isOpen = false;
                   const todayIdx = new Date().getDay();
                   const todayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][todayIdx];
@@ -368,15 +332,13 @@ React.useEffect(() => {
                     const dayHours: Record<string, string> = {};
                     Object.entries(hours).forEach(([key, value]) => {
                       if (key.includes('-')) {
-                        // Range like mon-fri
                         const [start, end] = key.split('-');
-                        const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] as string);
-                        const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] as string);
+                        const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] || start);
+                        const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] || end);
                         for (let i = startIdx; i <= endIdx; i++) {
                           dayHours[dayOrder[i]] = value as string;
                         }
                       } else {
-                        // Single day
                         const d = dayMap[key.slice(0,3)] || key;
                         dayHours[d] = value as string;
                       }
@@ -397,17 +359,16 @@ React.useEffect(() => {
                       if (nowMins >= fromMins && nowMins < toMins) isOpen = true;
                       if (!isOpen && toMins > 24 * 60 && nowMins < (toMins - 24 * 60)) isOpen = true;
                     }
-                    return (
-                      <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 10}}>
-                        <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: isOpen ? '#2ecc40' : '#e74c3c', marginRight: 6}} />
-                        <Text style={{color: isOpen ? '#2ecc40' : '#e74c3c', fontWeight: 'bold'}}>{isOpen ? 'Open now' : 'Closed'}</Text>
-                      </View>
-                    );
                   }
-                  return null;
+                  return (
+                    <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 10}}>
+                      <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: isOpen ? '#2ecc40' : '#e74c3c', marginRight: 6}} />
+                      <Text style={{color: isOpen ? '#2ecc40' : '#e74c3c', fontWeight: 'bold'}}>{isOpen ? 'Open now' : 'Closed'}</Text>
+                    </View>
+                  );
                 })()}
               </View>
-              {(() => {
+              <FoodSpotBusinessHoursSection business_hours={(() => {
                 let hours = foodSpot.business_hours;
                 if (typeof hours === 'string') {
                   try { hours = JSON.parse(hours); } catch {}
@@ -420,58 +381,40 @@ React.useEffect(() => {
                   const dayHours: Record<string, string> = {};
                   Object.entries(hours).forEach(([key, value]) => {
                     if (key.includes('-')) {
-                      // Range like mon-fri
                       const [start, end] = key.split('-');
-                      const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] as string);
-                      const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] as string);
+                      const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] || start);
+                      const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] || end);
                       for (let i = startIdx; i <= endIdx; i++) {
                         dayHours[dayOrder[i]] = value as string;
                       }
                     } else {
-                      // Single day
                       const d = dayMap[key.slice(0,3)] || key;
                       dayHours[d] = value as string;
                     }
                   });
-                  const todayIdx = new Date().getDay();
-                  const todayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][todayIdx];
-                  return (
-                    <View style={styles.hoursCard}>
-                      {dayOrder.map((day) => (
-                        <View key={day} style={[styles.hoursRow, todayKey === day && styles.hoursRowToday]}> 
-                          <Text style={[styles.hoursDay, todayKey === day && styles.hoursDayToday]}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
-                          <Text style={styles.hoursTime}>{dayHours[day] ? dayHours[day] : 'Closed'}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
+                  return dayOrder.map(day => ({ day, hours: dayHours[day] || 'Closed' }));
                 }
-                return null;
-              })()}
+                return [];
+              })()} />
             </View>
-          )}
+          ) : null}
 
-          {/* Social Links */}
-          {foodSpot.social_links && (
+          {/* Social Links Card */}
+          {foodSpot.social_links ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Social Links</Text>
-              {(() => {
+              <FoodSpotSocialLinksSection social_links={(() => {
                 let links = foodSpot.social_links;
                 if (typeof links === 'string') {
                   try { links = JSON.parse(links); } catch {}
                 }
                 if (typeof links === 'object' && links !== null) {
-                  return Object.entries(links).map(([key, value]) => (
-                    <TouchableOpacity key={key} onPress={() => Linking.openURL(String(value))} style={{flexDirection: 'row', alignItems: 'center', marginBottom: 6}}>
-                      <Feather name={key === 'facebook' ? 'facebook' : key === 'instagram' ? 'instagram' : 'link'} size={16} color={colors.primary} />
-                      <Text style={{color: colors.primary, marginLeft: 6, textDecorationLine: 'underline'}}>{key.charAt(0).toUpperCase() + key.slice(1)}</Text>
-                    </TouchableOpacity>
-                  ));
+                  return links;
                 }
-                return null;
-              })()}
+                return {};
+              })()} />
             </View>
-          )}
+          ) : null}
 
           <View style={styles.section}>
             <View style={styles.reviewHeader}>

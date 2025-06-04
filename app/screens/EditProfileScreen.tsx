@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../../services/ApiClient';
 import {
   StyleSheet,
   View,
@@ -127,14 +128,15 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       return;
     }
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
     });
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
-      setSelectedImage(pickerResult.assets[0].uri); // Always store as string
-      setPickerAsset(pickerResult.assets[0]);
+      const asset = pickerResult.assets[0];
+      setSelectedImage(asset.uri); // Always store as string
+      setPickerAsset(asset);
     }
   };
   const handleSave = async () => {
@@ -145,9 +147,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       setSaving(true);
       let imageUrl = selectedImage;
       // If a new image is selected and it's a local file, upload it
-      if (selectedImage && (pickerAsset || (typeof selectedImage === 'string' && !selectedImage.startsWith('http')))) {
+      if (selectedImage && pickerAsset && selectedImage.startsWith('file')) {
         // 1. Delete old image if exists
-        if (userProfile.images && userProfile.images.length > 0) {
+        if (userProfile.images && userProfile.images.length > 0 && userProfile.images[0].id) {
           try {
             await deleteImage('users', userProfile.id, userProfile.images[0].id);
           } catch (e) {
@@ -156,9 +158,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         }
         // 2. Upload new image
         const formData = new FormData();
-        let fileName = pickerAsset?.fileName;
-        let fileType = pickerAsset?.mimeType || pickerAsset?.type;
-        let uri = pickerAsset?.uri || selectedImage;
+        let fileName = pickerAsset.fileName || pickerAsset.name;
+        let fileType = pickerAsset.mimeType || pickerAsset.type;
+        let uri = pickerAsset.uri;
         if (!fileName) {
           const uriParts = uri.split('/');
           fileName = uriParts[uriParts.length - 1] || 'profile.jpg';
@@ -170,15 +172,17 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
           fileName += fileType === 'image/png' ? '.png' : '.jpg';
         }
+        // DO NOT set Content-Type header, let fetch handle it
+        // @ts-ignore: React Native FormData allows this object for file upload
         formData.append('images[]', {
           uri,
           type: fileType,
           name: fileName,
-        } as any);
+        });
         if (__DEV__) {
           console.log('Uploading file:', { uri, type: fileType, name: fileName });
         }
-        const uploadUrl = `http://192.168.1.162:8000/api/images/users/${userProfile.id}`;
+        const uploadUrl = `${API_BASE_URL}/images/users/${userProfile.id}`;
         const token = await getToken();
         const fetchRes = await fetch(uploadUrl, {
           method: 'POST',
@@ -192,15 +196,19 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         if (__DEV__) {
           console.log('Upload response:', uploadRes);
         }
-        let imageUrl;
-        if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
-          imageUrl = uploadRes.data.data[0];
-        } else if (uploadRes.data?.data) {
-          imageUrl = uploadRes.data.data;
-        } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
-          imageUrl = uploadRes.data.images[0];
+        if (uploadRes.errors) {
+          throw new Error(uploadRes.message || 'Image upload failed.');
         }
-        setSelectedImage(imageUrl && (typeof imageUrl === 'string' ? imageUrl : imageUrl.url || imageUrl));
+        let uploadedImageUrl;
+        if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
+          uploadedImageUrl = uploadRes.data.data[0];
+        } else if (uploadRes.data?.data) {
+          uploadedImageUrl = uploadRes.data.data;
+        } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
+          uploadedImageUrl = uploadRes.data.images[0];
+        }
+        setSelectedImage(uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl));
+        imageUrl = uploadedImageUrl;
       }
       const updateData: UpdateData = {
         name: name.trim(),
@@ -212,8 +220,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         updateData.password_confirmation = confirmPassword;
       }
       // Always send images field, even if empty, to satisfy backend validation
-      if (selectedImage) {
-        updateData.images = [typeof selectedImage === 'string' ? selectedImage : selectedImage.url || selectedImage];
+      if (imageUrl) {
+        updateData.images = [typeof imageUrl === 'string' ? imageUrl : imageUrl.url || imageUrl];
       } else {
         updateData.images = [];
       }

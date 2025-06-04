@@ -85,43 +85,66 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const handleRegister = async () => {
     // Basic Validation
+
     if (!name || !email || !password || !passwordConfirmation) {
-      Alert.alert('Σφάλμα', 'Παρακαλώ συμπληρώστε όλα τα πεδία.');
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
     if (password !== passwordConfirmation) {
-      Alert.alert('Σφάλμα', 'Οι κωδικοί δεν ταιριάζουν.');
+      Alert.alert('Error', 'Passwords do not match.');
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
+    // Show a timeout message if registration takes too long
+
+    let slowTimeout: ReturnType<typeof setTimeout> | null = null;
+    slowTimeout = setTimeout(() => {
+      Alert.alert('Still working...', 'Registration is taking longer than usual. Please wait.');
+    }, 10000); // 10 seconds
+
     try {
       console.log(`Attempting registration for email: ${email}`);
-      await register({ name, email, password, password_confirmation: passwordConfirmation }); 
+      const regResult = await register({ name, email, password, password_confirmation: passwordConfirmation });
       console.log('Registration successful via context.');
 
-      // Registration successful
+      if (slowTimeout) clearTimeout(slowTimeout);
+
+      // If backend returns a message only (no auto-login), show it
+      if (regResult && regResult.success && regResult.message) {
+        Alert.alert(
+          'Registration Successful',
+          regResult.message + '\nYou can now log in.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+        return;
+      }
+
+      // Registration successful (auto-login case)
       Alert.alert(
-        'Επιτυχής Εγγραφή',
-        'Ο λογαριασμός σας δημιουργήθηκε. Παρακαλώ συνδεθείτε.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }] // Navigate to Login screen
+        'Registration Successful',
+        'Your account has been created. You can now log in.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
       // If register function in context automatically logs in, navigation will be handled by AppNavigator
 
     } catch (err: any) {
+      if (slowTimeout) clearTimeout(slowTimeout);
       console.error('Registration failed in component:', err);
-       // Try to get specific error messages from backend response
-       let errorMessage = 'Η εγγραφή απέτυχε. Παρακαλώ δοκιμάστε ξανά.';
-       if (err?.response?.data?.errors) {
-         // Example: Concatenate Laravel validation errors
-         errorMessage = Object.values(err.response.data.errors).flat().join('\n');
-       } else if (err?.response?.data?.message) {
-         errorMessage = err.response.data.message;
-       }
+      // Try to get specific error messages from backend response
+      let errorMessage = 'Registration failed. Please try again.';
+      if (err?.response?.data?.errors) {
+        // Example: Concatenate Laravel validation errors
+        errorMessage = Object.values(err.response.data.errors).flat().join('\n');
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
       setError(errorMessage);
-      Alert.alert('Σφάλμα Εγγραφής', errorMessage);
+      Alert.alert('Registration Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

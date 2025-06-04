@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { Dimensions, ScrollView, Image } from 'react-native';
+import { Dimensions, ScrollView, Image, FlatList } from 'react-native';
 import ReviewImagesCarousel from '../components/ReviewImagesCarousel';
 import {
   StyleSheet,
@@ -21,7 +21,8 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
 import UserReviewItem from '../components/UserReviewItem';
 import StarRating from '../components/StarRating';
-import { createReview, updateReview, deleteReview, getFoodSpot, getReviews, uploadImage } from '../../services/ApiClient';
+import { createReview, updateReview, deleteReview, getFoodSpot, getReviews, uploadImage, addFavourite, removeFavourite, getFavourites } from '../../services/ApiClient';
+import { useEffect } from 'react';
 import { FoodSpot, Review } from '../../types/models';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
@@ -69,6 +70,40 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     staleTime: 1000 * 60 * 2,
   });
 
+  // Favourites state and query (must be after useAuth and foodSpot)
+  const { data: favourites = [], refetch: refetchFavourites, isFetching: isFetchingFavourites } = useQuery({
+    queryKey: ['favourites'],
+    queryFn: async () => {
+      const response = await getFavourites();
+      return response.data?.data || response.data;
+    },
+    staleTime: 1000 * 60 * 5,
+    enabled: typeof token === 'string' && !!token,
+  });
+
+  // Is this food spot a favourite?
+  const isFavourite = !!(favourites && Array.isArray(favourites) && foodSpot && favourites.some((f) => f.id === foodSpot.id));
+
+  // Add/remove favourite handler
+  const handleToggleFavourite = async () => {
+    if (!token) {
+      Alert.alert('Login Required', 'Please log in to add favourites.');
+      navigation.navigate('Profile');
+      return;
+    }
+    if (!foodSpot) return;
+    try {
+      if (isFavourite) {
+        await removeFavourite(foodSpot.id);
+      } else {
+        await addFavourite(foodSpot.id);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['favourites'] });
+      await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update favourites.');
+    }
+  };
 
   const [reviewText, setReviewText] = useState('');
   const [userRating, setUserRating] = useState(0);
@@ -284,6 +319,9 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
             rating={foodSpot.rating}
             category={foodSpot.category}
             price_range={foodSpot.price_range}
+            isFavourite={isFavourite}
+            onToggleFavourite={handleToggleFavourite}
+            showFavourite={!!token}
           />
 
           {/* Review Images Carousel */}
@@ -454,49 +492,60 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                 
                 {/* Other users' reviews section */}
                 {(() => {
-                  const otherReviews = reviews.filter((review: Review) =>
-                    review.user_id !== user?.id && 
-                    !(typeof review.user === 'object' && review.user?.id === user?.id)
-                  );
-                  
+                  const otherReviews = reviews
+                    .filter((review: Review) =>
+                      review.user_id !== user?.id &&
+                      !(typeof review.user === 'object' && review.user?.id === user?.id)
+                    )
+                    .sort((a: Review, b: Review) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
                   if (otherReviews.length > 0) {
                     return (
                       <View style={styles.otherReviewsSection}>
                         {token && reviews.some((review: Review) =>
-                          review.user_id === user?.id || 
+                          review.user_id === user?.id ||
                           (typeof review.user === 'object' && review.user?.id === user?.id)
                         ) && (
                           <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
                         )}
-                        {otherReviews.map((review: Review) => (
-                          <ReviewItem 
-                            key={review.id} 
-                            review={{
-                              ...review,
-                              // Ensure user property has expected format for ReviewItem
-                              user: review.user?.name || 'Unknown User'
-                            }} 
-                          />
-                        ))}
+                        <FlatList
+                          data={otherReviews}
+                          keyExtractor={(item: Review) => item.id.toString()}
+                          renderItem={({ item }: { item: Review }) => (
+                            <View style={{ width: 280, marginRight: 16 }}>
+                              <ReviewItem
+                                review={{
+                                  ...item,
+                                  user: item.user?.name || 'Unknown User',
+                                }}
+                              />
+                            </View>
+                          )}
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          initialNumToRender={3}
+                          contentContainerStyle={{ paddingVertical: 4 }}
+                        />
                       </View>
                     );
                   }
-                  
+
                   // Show message if no other reviews exist
-                  if (reviews.length === 0 || 
-                      (reviews.length === 1 && (
-                        reviews[0].user_id === user?.id || 
-                        (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)
-                      ))) {
+                  if (
+                    reviews.length === 0 ||
+                    (reviews.length === 1 &&
+                      (reviews[0].user_id === user?.id ||
+                        (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)))
+                  ) {
                     return (
                       <Text style={styles.noReviewsText}>
-                        {reviews.length === 0 
-                          ? "No reviews yet. Be the first to leave a review!" 
-                          : "No other reviews yet."}
+                        {reviews.length === 0
+                          ? 'No reviews yet. Be the first to leave a review!'
+                          : 'No other reviews yet.'}
                       </Text>
                     );
                   }
-                  
+
                   return null;
                 })()}
               </>

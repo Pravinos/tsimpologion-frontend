@@ -1,3 +1,12 @@
+// --- Favourites ---
+// Get all favourites for the logged-in user
+export const getFavourites = () => get('/favourites');
+
+// Add a food spot to favourites
+export const addFavourite = (foodSpotId) => post(`/food-spots/${foodSpotId}/favourite`);
+
+// Remove a food spot from favourites
+export const removeFavourite = (foodSpotId) => del(`/food-spots/${foodSpotId}/favourite`);
 // First ensure these imports are at the top
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -12,16 +12,22 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../services/AuthProvider';
-import { getFoodSpots } from '../../services/ApiClient';
+import { getFoodSpots, getFavourites } from '../../services/ApiClient';
 import FoodSpotItem from '../components/FoodSpotItem';
 import colors from '../styles/colors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
   { label: 'Lowest First', value: 'asc' },
+];
+
+const LIST_OPTIONS = [
+  { label: 'Popular', value: 'popular' },
+  { label: 'Favourites', value: 'favourites' },
 ];
 
 interface FoodSpot {
@@ -117,6 +123,10 @@ const FilterModal = ({
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const [listType, setListType] = useState<'popular' | 'favourites'>('popular');
+
+  // Query for food spots
   const {
     data: foodSpots = [],
     isLoading: loading,
@@ -129,45 +139,70 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const response = await getFoodSpots();
       return response.data.data || response.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
+    enabled: listType === 'popular',
   });
 
-  // Dynamically extract unique categories from foodSpots and format them
+  // Query for favourites
+  const {
+    data: favouriteSpots = [],
+    isLoading: loadingFavourites,
+    isError: isFavouritesError,
+    refetch: refetchFavourites,
+    isFetching: isFetchingFavourites,
+  } = useQuery<FoodSpot[], Error>({
+    queryKey: ['favourites'],
+    queryFn: async () => {
+      const response = await getFavourites();
+      return response.data.data || response.data;
+    },
+    staleTime: 1000 * 60 * 5,
+    enabled: listType === 'favourites',
+  });
+
+
+  // Dynamically extract unique categories from the current list
   const categories = useMemo(() => {
-    // Use a Set to ensure uniqueness
     const set = new Set<string>();
-    (foodSpots as FoodSpot[]).forEach(spot => {
+    const spots = listType === 'favourites' ? favouriteSpots : foodSpots;
+    (spots as FoodSpot[]).forEach(spot => {
       if (spot.category) set.add(spot.category);
     });
     return Array.from(set).sort();
-  }, [foodSpots]);
+  }, [foodSpots, favouriteSpots, listType]);
 
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+
   // Filter and sort food spots based on search, category, and sort direction
   const filteredFoodSpots = useMemo(() => {
-    let spots = (foodSpots as FoodSpot[]).filter((spot: FoodSpot) => {
+    const spots = listType === 'favourites' ? favouriteSpots : foodSpots;
+    let filtered = (spots as FoodSpot[]).filter((spot: FoodSpot) => {
       const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
-      // Use strict equality for category only if selectedCategory is not empty, but trim and lowercase both sides for robustness
       const matchesCategory = !selectedCategory || (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
       return matchesSearch && matchesCategory;
     });
-    spots = spots.sort((a: FoodSpot, b: FoodSpot) => {
+    filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
       if (sortDirection === 'asc') {
         return (a.rating || 0) - (b.rating || 0);
       } else {
         return (b.rating || 0) - (a.rating || 0);
       }
     });
-    return spots;
-  }, [foodSpots, searchText, selectedCategory, sortDirection]);
+    return filtered;
+  }, [foodSpots, favouriteSpots, searchText, selectedCategory, sortDirection, listType]);
+
 
   const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
-  }, [queryClient]);
+    if (listType === 'favourites') {
+      queryClient.invalidateQueries({ queryKey: ['favourites'] });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
+    }
+  }, [queryClient, listType]);
 
   const navigateToDetail = useCallback((item: FoodSpot) => {
     navigation.navigate('FoodSpotDetail', { id: item.id, name: item.name });
@@ -180,7 +215,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     />
   ), [navigateToDetail]);
 
-  if (loading && !isFetching && (foodSpots as FoodSpot[]).length === 0) {
+  const isListLoading = listType === 'favourites' ? loadingFavourites : loading;
+  const isListFetching = listType === 'favourites' ? isFetchingFavourites : isFetching;
+  const isListError = listType === 'favourites' ? isFavouritesError : isError;
+  const refetchList = listType === 'favourites' ? refetchFavourites : refetch;
+
+  if (isListLoading && !isListFetching && filteredFoodSpots.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
@@ -234,12 +274,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.sectionTitle}>Popular Food Places</Text>
+
+        {/* List type selector */}
+        <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+          {LIST_OPTIONS.map(opt => (
+            <TouchableOpacity
+              key={opt.value}
+              style={{
+                backgroundColor: listType === opt.value ? colors.primary : colors.lightGray,
+                paddingVertical: 8,
+                paddingHorizontal: 18,
+                borderRadius: 20,
+                marginRight: 10,
+              }}
+              onPress={() => setListType(opt.value as 'popular' | 'favourites')}
+            >
+              <Text style={{ color: listType === opt.value ? colors.white : colors.primary, fontWeight: 'bold' }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* <Text style={styles.sectionTitle}>{listType === 'favourites' ? 'Your Favourites' : 'Popular Food Places'}</Text> */}
         
-        {isError ? (
+        {isListError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load food spots. Please try again.</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+            <Text style={styles.errorText}>Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetchList()}>
               <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -250,10 +310,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             keyExtractor={(item) => item.id.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
-            refreshing={isFetching}
+            refreshing={isListFetching}
             onRefresh={handleRefresh}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No food spots found.</Text>
+              <Text style={styles.emptyText}>No {listType === 'favourites' ? 'favourites' : 'food spots'} found.</Text>
             }
           />
         )}

@@ -160,28 +160,24 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const register = async (userData: RegisterData) => {
     try {
       const response = await apiClient.register(userData);
-      
-      // Debug: Log the full response structure
       console.log('Registration response structure:', JSON.stringify(response, null, 2));
-      
-      // Try different possible response structures
+
+      // Accept a successful registration message (no token/user) as valid
+      if (response.message && response.message.toLowerCase().includes('user registered')) {
+        // Registration succeeded, but no login. Just return a flag.
+        return { success: true, message: response.message };
+      }
+
+      // Try different possible response structures for auto-login
       let authToken, authUser;
-      
-      // Check direct response properties
       if (response.token && response.user) {
         authToken = response.token;
         authUser = response.user;
-      }
-      // Check if wrapped in data property
-      else if (response.data?.token && response.data?.user) {
+      } else if (response.data?.token && response.data?.user) {
         authToken = response.data.token;
         authUser = response.data.user;
-      }
-      // Check if token is direct but user needs to be fetched
-      else if (response.token || response.data?.token) {
+      } else if (response.token || response.data?.token) {
         authToken = response.token || response.data.token;
-        
-        // Fetch user data separately
         try {
           const userResponse = await apiClient.getCurrentUser();
           authUser = userResponse.data?.data || userResponse.data;
@@ -190,21 +186,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           throw new Error('Registration succeeded but failed to fetch user data');
         }
       }
-      else {
-        throw new Error(`Invalid registration response format. Response: ${JSON.stringify(response)}`);
-      }
-      
+
       if (authToken && authUser) {
-        // Update state
         setToken(authToken);
         setUser(authUser);
-        
-        // Save to storage
         await saveAuthData(authToken, authUser);
-        
         return { token: authToken, user: authUser };
       } else {
-        throw new Error('Missing token or user data in response');
+        throw new Error('Invalid registration response format. Response: ' + JSON.stringify(response));
       }
     } catch (error) {
       console.error('Registration error:', error);

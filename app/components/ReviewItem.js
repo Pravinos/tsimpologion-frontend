@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import StarRating from './StarRating';
 import colors from '../styles/colors';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
 
 const ReviewItem = ({ review }) => {
   // Handle both object user and string user formats
@@ -12,6 +13,10 @@ const ReviewItem = ({ review }) => {
   // Format date if available
   const formattedDate = review.created_at ? 
     new Date(review.created_at).toLocaleDateString() : null;
+
+
+  // Show review image if available
+  const reviewImage = review.images && review.images.length > 0 ? getFullImageUrl(review.images[0]) : null;
 
   return (
     <View style={styles.container}>
@@ -39,6 +44,13 @@ const ReviewItem = ({ review }) => {
         <StarRating rating={review.rating} size={14} />
       </View>
       <Text style={styles.comment}>{review.comment}</Text>
+      {reviewImage && typeof reviewImage === 'string' && (
+        <Image
+          source={{ uri: reviewImage }}
+          style={{ width: 120, height: 120, borderRadius: 10, marginTop: 8 }}
+          resizeMode="cover"
+        />
+      )}
     </View>
   );
 };

@@ -1,8 +1,11 @@
+
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import StarRating from './StarRating';
 import colors from '../styles/colors';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
+import { deleteImage } from '../../services/ApiClient';
 
 const UserReviewItem = ({ review, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -91,6 +94,37 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
     );
   }
 
+  // Show review image if available
+  const [removingImage, setRemovingImage] = useState(false);
+  const reviewImage = review.images && review.images.length > 0 ? getFullImageUrl(review.images[0]) : null;
+
+  // Helper to get image id or path for deletion
+  const getImageIdOrPath = (img) => {
+    if (!img) return null;
+    if (typeof img === 'object' && img.id) return img.id;
+    if (typeof img === 'object' && img.path) return img.path;
+    if (typeof img === 'string') return img;
+    return null;
+  };
+
+  const handleRemoveImage = async () => {
+    if (!review.images || review.images.length === 0) return;
+    const imageObj = review.images[0];
+    const imageIdOrPath = getImageIdOrPath(imageObj);
+    if (!imageIdOrPath) return;
+    try {
+      setRemovingImage(true);
+      await deleteImage('reviews', review.id, imageIdOrPath);
+      // Optionally, you may want to refresh the review here, or call onUpdate to refetch
+      if (onUpdate) await onUpdate(review.id, {}); // triggers refetch
+    } catch (err) {
+      Alert.alert('Error', 'Failed to remove image.');
+      console.error('Failed to remove review image:', err);
+    } finally {
+      setRemovingImage(false);
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[styles.container, styles.userReviewContainer]}
@@ -118,7 +152,6 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
             )}
           </View>
         </View>
-        
         {!isEditing ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity
@@ -183,6 +216,26 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
             placeholder="Edit your review..."
             editable={!isUpdating}
           />
+          {reviewImage && (
+            <View style={{ alignItems: 'center', marginTop: 12 }}>
+              <Image
+                source={{ uri: reviewImage }}
+                style={{ width: 120, height: 120, borderRadius: 10, marginBottom: 8 }}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                onPress={handleRemoveImage}
+                style={{ backgroundColor: colors.error, paddingVertical: 4, paddingHorizontal: 12, borderRadius: 6 }}
+                disabled={removingImage}
+              >
+                {removingImage ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={{ color: colors.white, fontWeight: 'bold' }}>Remove Photo</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.reviewContent}>
@@ -190,6 +243,13 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
             <StarRating rating={review.rating} size={14} />
           </View>
           <Text style={styles.comment}>{review.comment}</Text>
+          {reviewImage && typeof reviewImage === 'string' && (
+            <Image
+              source={{ uri: reviewImage }}
+              style={{ width: 120, height: 120, borderRadius: 10, marginTop: 8 }}
+              resizeMode="cover"
+            />
+          )}
         </View>
       )}
 

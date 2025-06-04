@@ -1,10 +1,13 @@
+
 import React, { useState, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
+import * as ImagePicker from 'expo-image-picker';
+import { Dimensions, ScrollView, Image } from 'react-native';
+import ReviewImagesCarousel from '../components/ReviewImagesCarousel';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
   TextInput,
   Linking,
   ActivityIndicator,
@@ -13,11 +16,11 @@ import {
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
 import ReviewItem from '../components/ReviewItem';
 import UserReviewItem from '../components/UserReviewItem';
 import StarRating from '../components/StarRating';
-import { createReview, updateReview, deleteReview, getFoodSpot, getReviews } from '../../services/ApiClient';
+import { createReview, updateReview, deleteReview, getFoodSpot, getReviews, uploadImage } from '../../services/ApiClient';
 import { FoodSpot, Review } from '../../types/models';
 import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
@@ -60,10 +63,40 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     staleTime: 1000 * 60 * 2,
   });
 
+// DEBUG: Print the full reviews array to inspect image structure
+// (must be inside the component, after reviews is defined)
+React.useEffect(() => {
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('FULL REVIEWS:', JSON.stringify(reviews, null, 2));
+  }
+}, [reviews]);
+
   const [reviewText, setReviewText] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Use correct type for selectedImage
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Permission to access media library is required!');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedImage(result.assets[0] as ImagePicker.ImagePickerAsset);
+    }
+  };
+
+  const handleRemoveImage = () => setSelectedImage(null);
 
   const handleSubmitReview = async () => {
     if (!token) {
@@ -84,22 +117,75 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
 
     try {
       setIsSubmitting(true);
-      await createReview(id, {
-        rating: userRating as 1 | 2 | 3 | 4 | 5, // Cast to valid rating
+      // 1. Create the review (no image field at all)
+      const reviewRes = await createReview(id, {
+        rating: userRating as 1 | 2 | 3 | 4 | 5,
         comment: reviewText,
-        user_id: user?.id // Make sure user_id is included
+        user_id: user?.id
+        // Do NOT send images field at all
       });
+      // 2. Upload image if selected, using the correct endpoint and robust logic
+      const reviewId = reviewRes.data?.id || reviewRes.data?.data?.id;
+      let uploadedImageUrl = null;
+      if (selectedImage && reviewId) {
+        setImageUploading(true);
+        const formData = new FormData();
+        const uri = selectedImage.uri;
+        let fileName = selectedImage.fileName;
+        let fileType = selectedImage.mimeType || selectedImage.type;
+        if (!fileName) {
+          const uriParts = uri.split('/');
+          fileName = uriParts[uriParts.length - 1] || `review_${Date.now()}.jpg`;
+        }
+        if (!fileType) {
+          if (fileName.endsWith('.png')) fileType = 'image/png';
+          else fileType = 'image/jpeg';
+        }
+        if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
+          fileName += fileType === 'image/png' ? '.png' : '.jpg';
+        }
+        // @ts-ignore: React Native FormData allows this object for file upload
+        formData.append('images[]', { uri, type: fileType, name: fileName });
+
+        // Use fetch for upload, not axios
+        const { API_BASE_URL } = require('../../services/ApiClient');
+        const uploadUrl = `${API_BASE_URL}/images/reviews/${reviewId}`;
+        const authToken = token;
+        const fetchRes = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+          },
+          body: formData,
+        });
+        const uploadRes = await fetchRes.json();
+        if (uploadRes.errors) {
+          throw new Error(uploadRes.message || 'Image upload failed.');
+        }
+        // Try to extract the uploaded image URL or path
+        if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
+          uploadedImageUrl = uploadRes.data.data[0];
+        } else if (uploadRes.data?.data) {
+          uploadedImageUrl = uploadRes.data.data;
+        } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
+          uploadedImageUrl = uploadRes.data.images[0];
+        }
+        setImageUploading(false);
+      }
       setReviewText('');
       setUserRating(0);
+      setSelectedImage(null);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] }); // Refetch spot to update rating
+      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
       Alert.alert('Success', 'Your review has been submitted successfully!');
     } catch (err: any) {
-      console.error('Failed to submit review:', err);
+      console.error('Failed to submit review:', err, err?.response?.data);
       const errorMessage = err.response?.data?.message || 'Failed to submit your review. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
       setIsSubmitting(false);
+      setImageUploading(false);
     }
   };
 
@@ -176,6 +262,17 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     );
   }
 
+  // DEBUG: Print review images structure
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('Review images:', JSON.stringify((reviews || []).map((r: any) => r.images)));
+  }
+  // Collect all review images for the carousel (ensure all are URLs)
+  const allReviewImages = (reviews || [])
+    .flatMap((r: Review) => (Array.isArray(r.images) ? r.images : []))
+    .map((img: any) => getFullImageUrl(img))
+    .filter(Boolean);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -192,13 +289,13 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
             <View style={styles.iconBackground}>
               <Feather name="map-pin" size={30} color={colors.primary} />
             </View>
-            <Text style={styles.name}>{foodSpot.name}</Text>        
+            <Text style={styles.name}>{foodSpot.name}</Text>
             <View style={styles.ratingContainer}>
-              <StarRating 
-                rating={foodSpot.rating || 0} 
-                size={18} 
-                selectable={false} 
-                onRatingChange={() => {}} 
+              <StarRating
+                rating={foodSpot.rating || 0}
+                size={18}
+                selectable={false}
+                onRatingChange={() => {}}
               />
               <Text style={styles.ratingText}>
                 {foodSpot.rating != null ? foodSpot.rating.toFixed(1) : 'No ratings yet'}
@@ -208,6 +305,11 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
               {foodSpot.category} {foodSpot.price_range ? `· ${foodSpot.price_range}` : ''}
             </Text>
           </View>
+
+          {/* Review Images Carousel */}
+          {allReviewImages.length > 0 && (
+            <ReviewImagesCarousel images={allReviewImages} />
+          )}
 
           {/* Address & Info Link & Phone */}
           <View style={styles.section}>
@@ -502,7 +604,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                       multiline
                       value={reviewText}
                       onChangeText={setReviewText}
-                      editable={!isSubmitting}
+                      editable={!isSubmitting && !imageUploading}
                       onFocus={() => {
                         setTimeout(() => {
                           if (scrollViewRef.current) {
@@ -511,6 +613,31 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                         }, 200);
                       }}
                     />
+                    {/* Image Picker */}
+                    <View style={{ marginBottom: 15 }}>
+                      {selectedImage ? (
+                        <View style={{ alignItems: 'center' }}>
+                          <Image
+                            source={{ uri: selectedImage.uri }}
+                            style={{ width: 120, height: 120, borderRadius: 10, marginBottom: 8 }}
+                          />
+                          <TouchableOpacity onPress={handleRemoveImage} style={{ marginBottom: 8 }}>
+                            <Text style={{ color: colors.error, fontWeight: 'bold' }}>Remove Photo</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity onPress={handlePickImage} style={{ backgroundColor: colors.lightGray, padding: 10, borderRadius: 8, alignItems: 'center' }}>
+                          <Feather name="camera" size={20} color={colors.primary} />
+                          <Text style={{ color: colors.primary, marginTop: 4 }}>Add a photo</Text>
+                        </TouchableOpacity>
+                      )}
+                      {imageUploading && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                          <ActivityIndicator size="small" color={colors.primary} />
+                          <Text style={{ marginLeft: 8 }}>Uploading image...</Text>
+                        </View>
+                      )}
+                    </View>
                     <TouchableOpacity 
                       style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                       onPress={handleSubmitReview}
@@ -544,7 +671,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     alignItems: 'center',
-    borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
   },
   backButton: {
@@ -785,3 +911,4 @@ const styles = StyleSheet.create({
 });
 
 export default FoodSpotDetailScreen;
+

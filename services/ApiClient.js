@@ -182,8 +182,15 @@ export const getUserReviews = (userId) => {
 };
 
 // --- Images ---
+// For React Native, must set correct headers for FormData
 export const uploadImage = (modelType, id, formData) => {
-  return post(`/images/${modelType}/${id}`, formData);
+  // Do NOT set Content-Type header manually for FormData in React Native
+  return apiClient.post(`/images/${modelType}/${id}`, formData, {
+    headers: {
+      'Accept': 'application/json',
+      // Let axios/fetch set Content-Type for FormData
+    },
+  });
 };
 
 export const viewAllImages = (modelType, id) => 

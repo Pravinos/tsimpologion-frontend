@@ -265,14 +265,30 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.lightGray,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   userReviewContainer: {
-    backgroundColor: colors.primary + '15', // Light primary color background
-    borderWidth: 2,
-    borderColor: colors.primary + '30',
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    paddingTop: 18,
+    paddingBottom: 18,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -318,12 +334,14 @@ const styles = StyleSheet.create({
   },
   username: {
     fontWeight: 'bold',
-    fontSize: 14,
-    color: colors.black,
+    fontSize: 15,
+    color: colors.primary,
+    marginBottom: 2,
   },
   date: {
     fontSize: 12,
     color: colors.darkGray,
+    marginBottom: 6,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -373,6 +391,7 @@ const styles = StyleSheet.create({
   },
   reviewContent: {
     marginTop: 4,
+    paddingLeft: 2,
   },
   ratingRow: {
     marginBottom: 6,

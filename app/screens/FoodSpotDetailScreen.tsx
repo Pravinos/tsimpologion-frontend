@@ -100,6 +100,8 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
       }
       await queryClient.invalidateQueries({ queryKey: ['favourites'] });
       await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
+      // Also invalidate the HomeScreen's favourites list
+      // (HomeScreen uses ['favourites'] and ['foodSpots'] as query keys, so this is sufficient)
     } catch (err) {
       Alert.alert('Error', 'Failed to update favourites.');
     }
@@ -211,6 +213,8 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
       setSelectedImage(null);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      // Explicitly refetch food spot to update rating immediately
+      await refetchSpot();
       Alert.alert('Success', 'Your review has been submitted successfully!');
     } catch (err: any) {
       console.error('Failed to submit review:', err, err?.response?.data);
@@ -226,6 +230,9 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     try {
       await updateReview(id, reviewId, data);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
+      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      // Explicitly refetch food spot to update rating immediately
+      await refetchSpot();
     } catch (err: any) {
       console.error('Failed to update review:', err);
       throw err; // Re-throw to let UserReviewItem handle the error display
@@ -413,9 +420,9 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                 }
                 if (typeof hours === 'object' && hours !== null) {
                   const dayMap: Record<string, string> = {
-                    'mon': 'monday', 'tue': 'tuesday', 'wed': 'wednesday', 'thu': 'thursday', 'fri': 'friday', 'sat': 'saturday', 'sun': 'sunday'
+                    'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday', 'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
                   };
-                  const dayOrder = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+                  const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
                   const dayHours: Record<string, string> = {};
                   Object.entries(hours).forEach(([key, value]) => {
                     if (key.includes('-')) {
@@ -545,7 +552,6 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
                       </Text>
                     );
                   }
-
                   return null;
                 })()}
               </>

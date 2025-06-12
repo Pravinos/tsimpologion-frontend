@@ -212,7 +212,6 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             onRefresh={handleRefresh}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                No {listType === 'favourites' ? 'favourites' : 'food spots'} found.
               </Text>
             }
           />

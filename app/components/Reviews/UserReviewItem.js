@@ -1,16 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import StarRating from './StarRating';
-import colors from '../styles/colors';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
-import { deleteImage } from '../../services/ApiClient';
+import StarRating from '../UI/StarRating';
+import colors from '../../styles/colors';
+import { getFullImageUrl } from '../../utils/getFullImageUrl';
+import { deleteImage } from '../../../services/ApiClient';
 
 const UserReviewItem = ({ review, onUpdate, onDelete }) => {
+
+  // Validate review object
+  if (!review) {
+    console.error('UserReviewItem received null or undefined review');
+    return (
+      <View style={[styles.container, styles.userReviewContainer]}>
+        <Text style={styles.errorText}>Invalid review data</Text>
+      </View>
+    );
+  }
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editRating, setEditRating] = useState(review.rating);
-  const [editComment, setEditComment] = useState(review.comment);
+  const [editRating, setEditRating] = useState(review.rating || 0);
+  const [editComment, setEditComment] = useState(review.comment || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -404,12 +415,17 @@ const styles = StyleSheet.create({
   tapHint: {
     marginTop: 8,
     alignItems: 'center',
-  },
-  tapHintText: {
+  },  tapHintText: {
     fontSize: 12,
     color: colors.darkGray,
     fontStyle: 'italic',
   },
+  errorText: {
+    color: colors.error || '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 10,
+  }
 });
 
 export default UserReviewItem;

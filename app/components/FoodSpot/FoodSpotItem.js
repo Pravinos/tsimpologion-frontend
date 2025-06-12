@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import colors from '../styles/colors';
-import StarRating from './StarRating';
+import colors from '../../styles/colors';
+import StarRating from '../UI/StarRating';
 
 const FoodSpotItem = ({ item, onPress }) => {
   return (

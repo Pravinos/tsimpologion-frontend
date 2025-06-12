@@ -6,19 +6,26 @@ import {
   FlatList, 
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
-  TextInput,
   Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+// Hooks and services
 import { useAuth } from '../../services/AuthProvider';
 import { getFoodSpots, getFavourites } from '../../services/ApiClient';
-import FoodSpotItem from '../components/FoodSpotItem';
-import colors from '../styles/colors';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Components
+import { FoodSpotItem } from '../components/FoodSpot';
+import { FilterModal, SearchBar, ListTypeSelector } from '../components/UI';
+
+// Utilities and styles
+import colors from '../styles/colors';
+import { getFullImageUrl } from '../utils/getFullImageUrl';
+
+// Types
+import { FoodSpot, ScreenProps } from '../types/appTypes';
 
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
@@ -30,116 +37,33 @@ const LIST_OPTIONS = [
   { label: 'Favourites', value: 'favourites' },
 ];
 
-interface FoodSpot {
-  id: number;
-  name: string;
-  category: string;
-  city: string;
-  rating?: number;
-  images?: any[];
-}
+type ListType = 'popular' | 'favourites';
 
-interface HomeScreenProps {
-  navigation: any;
-}
-
-const FilterModal = ({
-  visible,
-  onClose,
-  selectedCategory,
-  setSelectedCategory,
-  sortDirection,
-  setSortDirection,
-  categories,
-  sortOptions
-}: {
-  visible: boolean;
-  onClose: () => void;
-  selectedCategory: string;
-  setSelectedCategory: (cat: string) => void;
-  sortDirection: 'asc' | 'desc';
-  setSortDirection: (dir: 'asc' | 'desc') => void;
-  categories: string[];
-  sortOptions: { label: string; value: string }[];
-}) => (
-  <Modal
-    visible={visible}
-    animationType="slide"
-    transparent={true}
-    onRequestClose={onClose}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Filter & Sort</Text>
-        <Text style={styles.modalLabel}>Category</Text>
-        <View style={styles.buttonListRow}>
-          <TouchableOpacity
-            style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
-            onPress={() => setSelectedCategory('')}
-          >
-            <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
-          </TouchableOpacity>
-          {categories.map((cat: string) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
-              onPress={() => setSelectedCategory(cat)}
-            >
-              <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.modalLabel}>Sort by Rating</Text>
-        <View style={styles.buttonListRow}>
-          {sortOptions.map((opt: any) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.optionButton, sortDirection === opt.value && styles.optionButtonSelected]}
-              onPress={() => setSortDirection(opt.value)}
-            >
-              <Text style={[styles.optionButtonText, sortDirection === opt.value && styles.optionButtonTextSelected]}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={onClose}
-          >
-            <Text style={styles.modalButtonText}>Apply</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButton, { backgroundColor: colors.error }]}
-            onPress={() => { setSelectedCategory(''); setSortDirection('desc'); onClose(); }}
-          >
-            <Text style={styles.modalButtonText}>Clear</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  </Modal>
-);
-
-const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
-  const [listType, setListType] = useState<'popular' | 'favourites'>('popular');
+  
+  // UI state
+  const [listType, setListType] = useState<ListType>('popular');
+  const [searchText, setSearchText] = useState('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Query for food spots
   const {
     data: foodSpots = [],
-    isLoading: loading,
-    isError,
-    refetch,
-    isFetching,
+    isLoading: loadingFoodSpots,
+    isError: isFoodSpotsError,
+    refetch: refetchFoodSpots,
+    isFetching: isFetchingFoodSpots,
   } = useQuery<FoodSpot[], Error>({
     queryKey: ['foodSpots'],
     queryFn: async () => {
       const response = await getFoodSpots();
       return response.data.data || response.data;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'popular',
   });
 
@@ -156,35 +80,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const response = await getFavourites();
       return response.data.data || response.data;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'favourites',
   });
 
+  // Helper values for current list state
+  const currentData = listType === 'favourites' ? favouriteSpots : foodSpots;
+  const isLoading = listType === 'favourites' ? loadingFavourites : loadingFoodSpots;
+  const isError = listType === 'favourites' ? isFavouritesError : isFoodSpotsError;
+  const isFetching = listType === 'favourites' ? isFetchingFavourites : isFetchingFoodSpots;
+  const refetch = listType === 'favourites' ? refetchFavourites : refetchFoodSpots;
 
   // Dynamically extract unique categories from the current list
   const categories = useMemo(() => {
     const set = new Set<string>();
-    const spots = listType === 'favourites' ? favouriteSpots : foodSpots;
-    (spots as FoodSpot[]).forEach(spot => {
+    currentData.forEach((spot: FoodSpot) => {
       if (spot.category) set.add(spot.category);
     });
     return Array.from(set).sort();
-  }, [foodSpots, favouriteSpots, listType]);
-
-  const [searchText, setSearchText] = useState('');
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
+  }, [currentData]);
 
   // Filter and sort food spots based on search, category, and sort direction
   const filteredFoodSpots = useMemo(() => {
-    const spots = listType === 'favourites' ? favouriteSpots : foodSpots;
-    let filtered = (spots as FoodSpot[]).filter((spot: FoodSpot) => {
+    let filtered = currentData.filter((spot: FoodSpot) => {
       const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
-      const matchesCategory = !selectedCategory || (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
+      const matchesCategory = !selectedCategory || 
+        (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
       return matchesSearch && matchesCategory;
     });
+    
     filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
       if (sortDirection === 'asc') {
         return (a.rating || 0) - (b.rating || 0);
@@ -192,9 +116,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return (b.rating || 0) - (a.rating || 0);
       }
     });
+    
     return filtered;
-  }, [foodSpots, favouriteSpots, searchText, selectedCategory, sortDirection, listType]);
-
+  }, [currentData, searchText, selectedCategory, sortDirection]);
 
   const handleRefresh = useCallback(() => {
     if (listType === 'favourites') {
@@ -215,12 +139,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     />
   ), [navigateToDetail]);
 
-  const isListLoading = listType === 'favourites' ? loadingFavourites : loading;
-  const isListFetching = listType === 'favourites' ? isFetchingFavourites : isFetching;
-  const isListError = listType === 'favourites' ? isFavouritesError : isError;
-  const refetchList = listType === 'favourites' ? refetchFavourites : refetch;
+  const handleListTypeChange = useCallback((value: string) => {
+    setListType(value as ListType);
+  }, []);
 
-  if (isListLoading && !isListFetching && filteredFoodSpots.length === 0) {
+  // Show loading state
+  if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
@@ -246,60 +170,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             onPress={() => navigation.navigate('Profile')}
           >
             {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
-              <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={{ width: 43, height: 43, borderRadius: 20, backgroundColor: colors.white }} />
+              <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={styles.profileImage} />
             ) : (
               <Feather name="user" size={24} color={colors.white} />
             )}
           </TouchableOpacity>
         </View>
         
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Feather name="search" size={20} color={colors.darkGray} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search for food places..."
-              placeholderTextColor={colors.darkGray}
-              value={searchText}
-              onChangeText={setSearchText}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Feather name="filter" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <SearchBar 
+          searchText={searchText}
+          setSearchText={setSearchText}
+          onFilterPress={() => setFilterModalVisible(true)}
+        />
         
-
-        {/* List type selector */}
-        <View style={{ flexDirection: 'row', marginBottom: 10 }}>
-          {LIST_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.value}
-              style={{
-                backgroundColor: listType === opt.value ? colors.primary : colors.lightGray,
-                paddingVertical: 8,
-                paddingHorizontal: 18,
-                borderRadius: 20,
-                marginRight: 10,
-              }}
-              onPress={() => setListType(opt.value as 'popular' | 'favourites')}
-            >
-              <Text style={{ color: listType === opt.value ? colors.white : colors.primary, fontWeight: 'bold' }}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* <Text style={styles.sectionTitle}>{listType === 'favourites' ? 'Your Favourites' : 'Popular Food Places'}</Text> */}
+        <ListTypeSelector 
+          options={LIST_OPTIONS}
+          selectedValue={listType}
+          onSelect={handleListTypeChange}
+        />
         
-        {isListError ? (
+        {isError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetchList()}>
+            <Text style={styles.errorText}>
+              Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
+            </Text>
+            <TouchableOpacity 
+              style={styles.retryButton} 
+              onPress={() => refetch()}
+            >
               <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -310,15 +208,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             keyExtractor={(item) => item.id.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
-            refreshing={isListFetching}
+            refreshing={isFetching}
             onRefresh={handleRefresh}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No {listType === 'favourites' ? 'favourites' : 'food spots'} found.</Text>
+              <Text style={styles.emptyText}>
+                No {listType === 'favourites' ? 'favourites' : 'food spots'} found.
+              </Text>
             }
           />
         )}
 
-        {/* Filter Modal */}
         <FilterModal
           visible={filterModalVisible}
           onClose={() => setFilterModalVisible(false)}
@@ -342,14 +241,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    // paddingTop: 10, // Remove manual top padding, SafeAreaView handles this
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
-    // marginTop: 8, // Remove manual top margin, SafeAreaView handles this
   },
   welcome: {
     fontSize: 16,
@@ -368,41 +265,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
-  searchBar: {
-    flex: 1,
-    height: 46,
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    color: colors.darkGray,
-    fontSize: 14,
-    height: 46,
-  },
-  filterButton: {
-    width: 46,
-    height: 46,
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  profileImage: {
+    width: 43, 
+    height: 43, 
+    borderRadius: 20, 
+    backgroundColor: colors.white
   },
   listContent: {
     paddingBottom: 20,
@@ -445,79 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.darkGray,
     marginTop: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    maxWidth: 350,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  modalLabel: {
-    alignSelf: 'flex-start',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 4,
-    color: colors.primary,
-  },
-  buttonListRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    marginBottom: 12,
-    width: '100%',
-  },
-  optionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.white,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  optionButtonSelected: {
-    backgroundColor: colors.primary,
-  },
-  optionButtonText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  optionButtonTextSelected: {
-    color: colors.white,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  modalButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
   },
   section: {
     backgroundColor: colors.white,

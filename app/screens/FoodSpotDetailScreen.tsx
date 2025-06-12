@@ -1,15 +1,12 @@
-
+// filepath: c:\tsimpologion-app\tsimpologion-frontend\app\screens\FoodSpotDetailScreen.tsx
 import React, { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { Dimensions, ScrollView, Image, FlatList } from 'react-native';
-import ReviewImagesCarousel from '../components/ReviewImagesCarousel';
+import { ScrollView, FlatList } from 'react-native';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  TextInput,
-  Linking,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -17,204 +14,221 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MaterialIcons, Feather } from '@expo/vector-icons';
-import ReviewItem from '../components/ReviewItem';
-import UserReviewItem from '../components/UserReviewItem';
-import StarRating from '../components/StarRating';
-import { createReview, updateReview, deleteReview, getFoodSpot, getReviews, uploadImage, addFavourite, removeFavourite, getFavourites } from '../../services/ApiClient';
+// Components
+import { ReviewImagesCarousel, ReviewsSection, ReviewForm } from '../components/Reviews';
+import { 
+  FoodSpotHeader, 
+  FoodSpotDetailsSection, 
+  FoodSpotAboutSection, 
+  FoodSpotBusinessHoursSection, 
+  FoodSpotSocialLinksSection,
+  BusinessHourIndicator 
+} from '../components/FoodSpot';
+
+// Hooks and utilities
 import { useEffect } from 'react';
-import { FoodSpot, Review } from '../../types/models';
-import colors from '../styles/colors';
 import { useAuth } from '../../services/AuthProvider';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
-import FoodSpotHeader from '../components/FoodSpotHeader';
-import FoodSpotDetailsSection from '../components/FoodSpotDetailsSection';
-import FoodSpotAboutSection from '../components/FoodSpotAboutSection';
-import FoodSpotBusinessHoursSection from '../components/FoodSpotBusinessHoursSection';
-import FoodSpotSocialLinksSection from '../components/FoodSpotSocialLinksSection';
+import { useBusinessHours } from '../hooks/useBusinessHours';
+import { parseSocialLinks } from '../utils/parseSocialLinks';
 
-const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: any }) => {
-  const { id } = route.params;
+// API services
+import { 
+  createReview, 
+  updateReview, 
+  deleteReview, 
+  getFoodSpot, 
+  getReviews, 
+  uploadImage, 
+  addFavourite, 
+  removeFavourite, 
+  getFavourites 
+} from '../../services/ApiClient';
+
+// Types and styles
+import { FoodSpot, Review } from '../../types/models';
+import { ScreenProps } from '../types/appTypes';
+import colors from '../styles/colors';
+
+// Type for the route parameters
+interface FoodSpotDetailParams {
+  id: number;
+  name?: string;
+}
+
+const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
+  const { id } = route.params as unknown as FoodSpotDetailParams;
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Replace foodSpot state/effect with React Query
+  // State for review submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  
+  // React Query for food spot details
   const {
     data: foodSpot,
     isLoading: isLoadingSpot,
     isError: isSpotError,
     refetch: refetchSpot,
-  } = useQuery({
+  } = useQuery<FoodSpot>({
     queryKey: ['foodSpot', id],
     queryFn: async () => {
       const response = await getFoodSpot(id);
       return response.data?.data || response.data;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Replace reviews state/effect with React Query
+  // React Query for reviews
   const {
     data: reviews = [],
     isLoading: isLoadingReviews,
     isError: isReviewsError,
     refetch: refetchReviews,
-  } = useQuery({
+  } = useQuery<Review[]>({
     queryKey: ['foodSpotReviews', id],
     queryFn: async () => {
       const response = await getReviews(id);
       return response.data?.data || response.data;
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  // Favourites state and query (must be after useAuth and foodSpot)
-  const { data: favourites = [], refetch: refetchFavourites, isFetching: isFetchingFavourites } = useQuery({
+  // React Query for favorites
+  const { 
+    data: favourites = [], 
+    refetch: refetchFavourites 
+  } = useQuery<FoodSpot[]>({
     queryKey: ['favourites'],
     queryFn: async () => {
       const response = await getFavourites();
       return response.data?.data || response.data;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: typeof token === 'string' && !!token,
   });
 
-  // Is this food spot a favourite?
-  const isFavourite = !!(favourites && Array.isArray(favourites) && foodSpot && favourites.some((f) => f.id === foodSpot.id));
+  // Check if food spot is a favorite
+  const isFavourite = Array.isArray(favourites) && 
+    foodSpot && 
+    favourites.some(f => f.id === foodSpot.id);
+  
+  // Use custom hook for business hours
+  const { isOpen, formattedHours } = useBusinessHours(foodSpot?.business_hours);
+  
+  // Parse social links
+  const socialLinks = parseSocialLinks(foodSpot?.social_links);
 
-  // Add/remove favourite handler
+  // Check if user already has a review
+  const userHasReview = token && reviews.some((review: Review) =>
+    review.user_id === user?.id || 
+    (typeof review.user === 'object' && review.user?.id === user?.id)
+  );
+
+  // Handler to toggle favorite status
   const handleToggleFavourite = async () => {
     if (!token) {
       Alert.alert('Login Required', 'Please log in to add favourites.');
       navigation.navigate('Profile');
       return;
     }
+    
     if (!foodSpot) return;
+    
     try {
       if (isFavourite) {
         await removeFavourite(foodSpot.id);
       } else {
         await addFavourite(foodSpot.id);
       }
+      
+      // Invalidate relevant queries
       await queryClient.invalidateQueries({ queryKey: ['favourites'] });
       await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
-      // Also invalidate the HomeScreen's favourites list
-      // (HomeScreen uses ['favourites'] and ['foodSpots'] as query keys, so this is sufficient)
     } catch (err) {
       Alert.alert('Error', 'Failed to update favourites.');
     }
   };
 
-  const [reviewText, setReviewText] = useState('');
-  const [userRating, setUserRating] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Use correct type for selectedImage
-  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [imageUploading, setImageUploading] = useState(false);
-
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Permission to access media library is required!');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setSelectedImage(result.assets[0] as ImagePicker.ImagePickerAsset);
-    }
-  };
-
-  const handleRemoveImage = () => setSelectedImage(null);
-
-  const handleSubmitReview = async () => {
+  // Handler to submit a new review
+  const handleSubmitReview = async (
+    rating: number, 
+    comment: string, 
+    selectedImage: ImagePicker.ImagePickerAsset | null
+  ) => {
     if (!token) {
       Alert.alert('Login Required', 'Please log in to leave a review.');
-      navigation.navigate('Profile'); // Direct them to the profile screen to log in
-      return;
-    }
-
-    if (userRating === 0) {
-      Alert.alert('Rating Required', 'Please select a rating for your review.');
-      return;
-    }
-
-    if (!reviewText.trim()) {
-      Alert.alert('Comment Required', 'Please write a comment for your review.');
+      navigation.navigate('Profile');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      // 1. Create the review (no image field at all)
+      
+      // 1. Create the review
       const reviewRes = await createReview(id, {
-        rating: userRating as 1 | 2 | 3 | 4 | 5,
-        comment: reviewText,
+        rating: rating as 1 | 2 | 3 | 4 | 5,
+        comment: comment,
         user_id: user?.id
-        // Do NOT send images field at all
       });
-      // 2. Upload image if selected, using the correct endpoint and robust logic
+      
+      // 2. Upload image if selected
       const reviewId = reviewRes.data?.id || reviewRes.data?.data?.id;
-      let uploadedImageUrl = null;
       if (selectedImage && reviewId) {
         setImageUploading(true);
+        
         const formData = new FormData();
         const uri = selectedImage.uri;
         let fileName = selectedImage.fileName;
         let fileType = selectedImage.mimeType || selectedImage.type;
+        
         if (!fileName) {
           const uriParts = uri.split('/');
           fileName = uriParts[uriParts.length - 1] || `review_${Date.now()}.jpg`;
         }
+        
         if (!fileType) {
           if (fileName.endsWith('.png')) fileType = 'image/png';
           else fileType = 'image/jpeg';
         }
+        
         if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
           fileName += fileType === 'image/png' ? '.png' : '.jpg';
         }
+        
         // @ts-ignore: React Native FormData allows this object for file upload
         formData.append('images[]', { uri, type: fileType, name: fileName });
 
-        // Use fetch for upload, not axios
+        // Use fetch for upload
         const { API_BASE_URL } = require('../../services/ApiClient');
         const uploadUrl = `${API_BASE_URL}/images/reviews/${reviewId}`;
-        const authToken = token;
+        
         const fetchRes = await fetch(uploadUrl, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           },
           body: formData,
         });
+        
         const uploadRes = await fetchRes.json();
         if (uploadRes.errors) {
           throw new Error(uploadRes.message || 'Image upload failed.');
         }
-        // Try to extract the uploaded image URL or path
-        if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
-          uploadedImageUrl = uploadRes.data.data[0];
-        } else if (uploadRes.data?.data) {
-          uploadedImageUrl = uploadRes.data.data;
-        } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
-          uploadedImageUrl = uploadRes.data.images[0];
-        }
+        
         setImageUploading(false);
       }
-      setReviewText('');
-      setUserRating(0);
-      setSelectedImage(null);
+        // 3. Refresh data
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
-      // Explicitly refetch food spot to update rating immediately
+      // Also invalidate userReviews to update the profile page review count
+      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
       await refetchSpot();
+      
       Alert.alert('Success', 'Your review has been submitted successfully!');
     } catch (err: any) {
       console.error('Failed to submit review:', err, err?.response?.data);
@@ -225,43 +239,36 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
       setImageUploading(false);
     }
   };
-
+  // Handler to update an existing review
   const handleUpdateReview = async (reviewId: number, data: { rating: number; comment: string }) => {
     try {
       await updateReview(id, reviewId, data);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
-      // Explicitly refetch food spot to update rating immediately
+      // Also invalidate userReviews to update the profile page review count
+      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
       await refetchSpot();
     } catch (err: any) {
       console.error('Failed to update review:', err);
-      throw err; // Re-throw to let UserReviewItem handle the error display
+      throw err;
     }
   };
-
+  // Handler to delete a review
   const handleDeleteReview = async (reviewId: number) => {
     try {
       await deleteReview(id, reviewId);
       await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
+      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      // Also invalidate userReviews to update the profile page review count
+      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
+      await refetchSpot();
     } catch (err: any) {
       console.error('Failed to delete review:', err);
-      throw err; // Re-throw to let UserReviewItem handle the error display
+      throw err;
     }
   };
 
-  const openMap = () => {
-    // Try to use the info_link from the API first, fallback to a Google Maps search
-    if (foodSpot?.info_link) {
-      Linking.openURL(foodSpot.info_link);
-    } else if (foodSpot?.address) {
-      // Create a Google Maps search URL with the address
-      const mapUrl = `https://maps.google.com/?q=${encodeURIComponent(
-        `${foodSpot.name}, ${foodSpot.address}, ${foodSpot.city}`
-      )}`;
-      Linking.openURL(mapUrl);
-    }
-  };
-
+  // Loading state
   if (isLoadingSpot) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -273,11 +280,12 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     );
   }
 
-  if (error) {
+  // Error state
+  if (isSpotError) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>Failed to load food spot details.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetchSpot()}>
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
@@ -286,6 +294,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     );
   }
 
+  // Not found state
   if (!foodSpot) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -302,8 +311,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
     );
   }
 
-  // (Debug logs removed)
-  // Collect all review images for the carousel (ensure all are URLs)
+  // Collect all review images for the carousel
   const allReviewImages = (reviews || [])
     .flatMap((r: Review) => (Array.isArray(r.images) ? r.images : []))
     .map((img: any) => getFullImageUrl(img))
@@ -321,6 +329,7 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
           keyboardShouldPersistTaps="handled"
           ref={scrollViewRef}
         >
+          {/* Header Section */}
           <FoodSpotHeader
             name={foodSpot.name}
             rating={foodSpot.rating}
@@ -348,310 +357,64 @@ const FoodSpotDetailScreen = ({ route, navigation }: { route: any; navigation: a
           </View>
 
           {/* About Card */}
-          {foodSpot.description ? (
+          {foodSpot.description && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
               <FoodSpotAboutSection about={foodSpot.description} />
             </View>
-          ) : null}
+          )}
 
-          {/* Business Hours Card with Open Now indicator */}
-          {foodSpot.business_hours ? (
+          {/* Business Hours Card */}
+          {foodSpot.business_hours && (
             <View style={styles.section}>
-              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12}}>
-                <Text style={[styles.sectionTitle, {flex: 1, marginBottom: 0}]}>Business Hours</Text>
-                {(() => {
-                  let hours = foodSpot.business_hours;
-                  if (typeof hours === 'string') {
-                    try { hours = JSON.parse(hours); } catch {}
-                  }
-                  let isOpen = false;
-                  const todayIdx = new Date().getDay();
-                  const todayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][todayIdx];
-                  let todayRange = null;
-                  if (typeof hours === 'object' && hours !== null) {
-                    const dayMap: Record<string, string> = {
-                      'mon': 'monday', 'tue': 'tuesday', 'wed': 'wednesday', 'thu': 'thursday', 'fri': 'friday', 'sat': 'saturday', 'sun': 'sunday'
-                    };
-                    const dayOrder = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
-                    const dayHours: Record<string, string> = {};
-                    Object.entries(hours).forEach(([key, value]) => {
-                      if (key.includes('-')) {
-                        const [start, end] = key.split('-');
-                        const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] || start);
-                        const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] || end);
-                        for (let i = startIdx; i <= endIdx; i++) {
-                          dayHours[dayOrder[i]] = value as string;
-                        }
-                      } else {
-                        const d = dayMap[key.slice(0,3)] || key;
-                        dayHours[d] = value as string;
-                      }
-                    });
-                    todayRange = dayHours[todayKey];
-                    // Open/closed logic for today
-                    if (todayRange) {
-                      const now = new Date();
-                      const hour = now.getHours();
-                      const minute = now.getMinutes();
-                      const [from, to] = todayRange.split('-');
-                      const [fromH, fromM] = from.split(':').map(Number);
-                      const [toH, toM] = to.split(':').map(Number);
-                      const nowMins = hour * 60 + minute;
-                      const fromMins = fromH * 60 + fromM;
-                      let toMins = toH * 60 + toM;
-                      if (toMins <= fromMins) toMins += 24 * 60;
-                      if (nowMins >= fromMins && nowMins < toMins) isOpen = true;
-                      if (!isOpen && toMins > 24 * 60 && nowMins < (toMins - 24 * 60)) isOpen = true;
-                    }
-                  }
-                  return (
-                    <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 10}}>
-                      <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: isOpen ? '#2ecc40' : '#e74c3c', marginRight: 6}} />
-                      <Text style={{color: isOpen ? '#2ecc40' : '#e74c3c', fontWeight: 'bold'}}>{isOpen ? 'Open now' : 'Closed'}</Text>
-                    </View>
-                  );
-                })()}
+              <View style={styles.sectionTitleRow}>
+                <Text style={[styles.sectionTitle, styles.sectionTitleWithIndicator]}>
+                  Business Hours
+                </Text>
+                <BusinessHourIndicator isOpen={isOpen} />
               </View>
-              <FoodSpotBusinessHoursSection business_hours={(() => {
-                let hours = foodSpot.business_hours;
-                if (typeof hours === 'string') {
-                  try { hours = JSON.parse(hours); } catch {}
-                }
-                if (typeof hours === 'object' && hours !== null) {
-                  const dayMap: Record<string, string> = {
-                    'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday', 'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday'
-                  };
-                  const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-                  const dayHours: Record<string, string> = {};
-                  Object.entries(hours).forEach(([key, value]) => {
-                    if (key.includes('-')) {
-                      const [start, end] = key.split('-');
-                      const startIdx = dayOrder.indexOf(dayMap[start.slice(0,3)] || start);
-                      const endIdx = dayOrder.indexOf(dayMap[end.slice(0,3)] || end);
-                      for (let i = startIdx; i <= endIdx; i++) {
-                        dayHours[dayOrder[i]] = value as string;
-                      }
-                    } else {
-                      const d = dayMap[key.slice(0,3)] || key;
-                      dayHours[d] = value as string;
-                    }
-                  });
-                  return dayOrder.map(day => ({ day, hours: dayHours[day] || 'Closed' }));
-                }
-                return [];
-              })()} />
+              <FoodSpotBusinessHoursSection business_hours={formattedHours} />
             </View>
-          ) : null}
+          )}
 
           {/* Social Links Card */}
-          {foodSpot.social_links ? (
+          {Object.keys(socialLinks).length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Social Links</Text>
-              <FoodSpotSocialLinksSection social_links={(() => {
-                let links = foodSpot.social_links;
-                if (typeof links === 'string') {
-                  try { links = JSON.parse(links); } catch {}
-                }
-                if (typeof links === 'object' && links !== null) {
-                  return links;
-                }
-                return {};
-              })()} />
+              <FoodSpotSocialLinksSection social_links={socialLinks} />
             </View>
-          ) : null}
+          )}
 
+          {/* Reviews Section */}
           <View style={styles.section}>
             <View style={styles.reviewHeader}>
               <Text style={styles.sectionTitle}>Reviews</Text>
               <Text style={styles.reviewCount}>{reviews.length} Reviews</Text>
             </View>
             
-            {isLoadingReviews ? (
-              <View style={styles.loadingReviewsContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.loadingText}>Loading reviews...</Text>
-              </View>
-            ) : (
-              <>
-                {/* User's own review section */}
-                {(() => {
-                  const userReview = reviews.find((review: Review) =>
-                    review.user_id === user?.id || 
-                    (typeof review.user === 'object' && review.user?.id === user?.id)
-                  );
-                  
-                  if (userReview && token) {
-                    return (
-                      <View style={styles.userReviewSection}>
-                        <Text style={styles.userReviewTitle}>Your Review</Text>
-                        <UserReviewItem 
-                          key={userReview.id}
-                          review={userReview}
-                          onUpdate={handleUpdateReview}
-                          onDelete={handleDeleteReview}
-                        />
-                      </View>
-                    );
-                  }
-                  return null;
-                })()}
-                
-                {/* Other users' reviews section */}
-                {(() => {
-                  const otherReviews = reviews
-                    .filter((review: Review) =>
-                      review.user_id !== user?.id &&
-                      !(typeof review.user === 'object' && review.user?.id === user?.id)
-                    )
-                    .sort((a: Review, b: Review) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-                  if (otherReviews.length > 0) {
-                    return (
-                      <View style={styles.otherReviewsSection}>
-                        {token && reviews.some((review: Review) =>
-                          review.user_id === user?.id ||
-                          (typeof review.user === 'object' && review.user?.id === user?.id)
-                        ) && (
-                          <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
-                        )}
-                        <FlatList
-                          data={otherReviews}
-                          keyExtractor={(item: Review) => item.id.toString()}
-                          renderItem={({ item }: { item: Review }) => (
-                            <View style={{ width: 280, marginRight: 16 }}>
-                              <ReviewItem
-                                review={{
-                                  ...item,
-                                  user: item.user?.name || 'Unknown User',
-                                }}
-                              />
-                            </View>
-                          )}
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          initialNumToRender={3}
-                          contentContainerStyle={{ paddingVertical: 4 }}
-                        />
-                      </View>
-                    );
-                  }
-
-                  // Show message if no other reviews exist
-                  if (
-                    reviews.length === 0 ||
-                    (reviews.length === 1 &&
-                      (reviews[0].user_id === user?.id ||
-                        (typeof reviews[0].user === 'object' && reviews[0].user?.id === user?.id)))
-                  ) {
-                    return (
-                      <Text style={styles.noReviewsText}>
-                        {reviews.length === 0
-                          ? 'No reviews yet. Be the first to leave a review!'
-                          : 'No other reviews yet.'}
-                      </Text>
-                    );
-                  }
-                  return null;
-                })()}
-              </>
-            )}
+            <ReviewsSection 
+              reviews={reviews}
+              isLoading={isLoadingReviews}
+              userId={user?.id}
+              onUpdateReview={handleUpdateReview}
+              onDeleteReview={handleDeleteReview}
+            />
           </View>
           
           {/* Leave Your Review section - only show if user doesn't have a review yet */}
-          {(() => {
-            const userHasReview = token && reviews.some((review: Review) =>
-              review.user_id === user?.id || 
-              (typeof review.user === 'object' && review.user?.id === user?.id)
-            );
-            
-            if (userHasReview) {
-              return null; // Don't show the form if user already has a review
-            }
-            
-            return (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Leave Your Review</Text>
-                
-                {!token ? (
-                  <View style={styles.loginPrompt}>
-                    <Text style={styles.loginPromptText}>
-                      Please log in to leave a review
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.loginButton}
-                      onPress={() => navigation.navigate('Profile')}
-                    >
-                      <Text style={styles.loginButtonText}>Log In</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <>
-                    <View style={styles.ratingSelector}>
-                      <Text style={styles.ratingLabel}>Rating:</Text>
-                      <StarRating 
-                        rating={userRating} 
-                        size={24} 
-                        selectable={true}
-                        onRatingChange={setUserRating} 
-                      />
-                    </View>
-                    <TextInput
-                      style={styles.reviewInput}
-                      placeholder="Share your experience..."
-                      multiline
-                      value={reviewText}
-                      onChangeText={setReviewText}
-                      editable={!isSubmitting && !imageUploading}
-                      onFocus={() => {
-                        setTimeout(() => {
-                          if (scrollViewRef.current) {
-                            scrollViewRef.current.scrollToEnd({ animated: true });
-                          }
-                        }, 200);
-                      }}
-                    />
-                    {/* Image Picker */}
-                    <View style={{ marginBottom: 15 }}>
-                      {selectedImage ? (
-                        <View style={{ alignItems: 'center' }}>
-                          <Image
-                            source={{ uri: selectedImage.uri }}
-                            style={{ width: 120, height: 120, borderRadius: 10, marginBottom: 8 }}
-                          />
-                          <TouchableOpacity onPress={handleRemoveImage} style={{ marginBottom: 8 }}>
-                            <Text style={{ color: colors.error, fontWeight: 'bold' }}>Remove Photo</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <TouchableOpacity onPress={handlePickImage} style={{ backgroundColor: colors.lightGray, padding: 10, borderRadius: 8, alignItems: 'center' }}>
-                          <Feather name="camera" size={20} color={colors.primary} />
-                          <Text style={{ color: colors.primary, marginTop: 4 }}>Add a photo</Text>
-                        </TouchableOpacity>
-                      )}
-                      {imageUploading && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                          <ActivityIndicator size="small" color={colors.primary} />
-                          <Text style={{ marginLeft: 8 }}>Uploading image...</Text>
-                        </View>
-                      )}
-                    </View>
-                    <TouchableOpacity 
-                      style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-                      onPress={handleSubmitReview}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <ActivityIndicator size="small" color={colors.white} />
-                      ) : (
-                        <Text style={styles.submitButtonText}>SUBMIT</Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            );
-          })()}
+          {!userHasReview && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Leave Your Review</Text>
+              
+              <ReviewForm
+                isLoggedIn={!!token}
+                isSubmitting={isSubmitting}
+                imageUploading={imageUploading}
+                onSubmit={handleSubmitReview}
+                onNavigateToLogin={() => navigation.navigate('Profile')}
+              />
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -666,45 +429,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    alignItems: 'center',
-    borderBottomColor: colors.lightGray,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    zIndex: 10,
-  },
-  iconBackground: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  ratingContainer: {
+  sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  ratingText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: colors.darkGray,
-  },
-  category: {
-    fontSize: 16,
-    color: colors.darkGray,
+  sectionTitleWithIndicator: {
+    flex: 1,
+    marginBottom: 0,
   },
   section: {
     backgroundColor: colors.white,
@@ -723,35 +455,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.black,
-  },
-  // Add a shared row style for details (address, phone, info_link)
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6, // tighter spacing
-  },
-  address: {
-    fontSize: 16,
-    color: colors.black,
-    // marginBottom removed for tighter, consistent spacing
-  },
-  mapButton: {
-    flexDirection: 'row',
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -762,47 +465,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.darkGray,
   },
-  ratingSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  ratingLabel: {
-    fontSize: 16,
-    marginRight: 10,
-  },
-  reviewInput: {
-    height: 100,
-    borderWidth: 1,
-    borderColor: colors.mediumGray,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-    textAlignVertical: 'top',
-  },
-  submitButton: {
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  submitButtonDisabled: {
-    backgroundColor: colors.mediumGray,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  loadingReviewsContainer: {
-    padding: 20,
-    alignItems: 'center',
   },
   loadingText: {
     marginTop: 10,
@@ -831,82 +498,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: 'bold',
   },
-  noReviewsText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: colors.darkGray,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  loginPrompt: {
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-  },
-  loginPromptText: {
-    fontSize: 14,
-    color: colors.darkGray,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  loginButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  loginButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  userReviewSection: {
-    marginBottom: 20,
-  },
-  userReviewTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: colors.primary,
-  },
-  otherReviewsSection: {
-    marginTop: 10,
-  },
-  otherReviewsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: colors.black,
-  },
-  hoursCard: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 2,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  hoursRowToday: {
-    backgroundColor: '#e6f9ed', // subtle green highlight
-    borderRadius: 6,
-  },
-  hoursDay: {
-    fontWeight: 'bold',
-    color: colors.darkGray,
-    fontSize: 15,
-  },
-  hoursDayToday: {
-    color: '#2ecc40',
-  },
-  hoursTime: {
-    color: colors.black,
-    fontSize: 15,
-  },
 });
 
 export default FoodSpotDetailScreen;
-

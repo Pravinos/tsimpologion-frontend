@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import colors from '../styles/colors';
+import colors from '../../styles/colors';
 
 const FoodSpotBusinessHoursSection = ({ business_hours }) => {
   if (!business_hours || !Array.isArray(business_hours) || business_hours.length === 0) return null;

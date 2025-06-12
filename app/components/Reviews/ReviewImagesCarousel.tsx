@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Image, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
-import colors from '../styles/colors';
+import { getFullImageUrl } from '../../utils/getFullImageUrl';
+import colors from '../../styles/colors';
 
 interface ReviewImagesCarouselProps {
   images: string[];

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import colors from '../styles/colors';
+import colors from '../../styles/colors';
 
 const StarRating = ({ rating, size = 16, selectable = false, onRatingChange }) => {
   // Convert rating to integer to ensure we have whole stars

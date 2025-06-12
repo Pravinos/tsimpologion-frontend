@@ -1,10 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import StarRating from './StarRating';
-import colors from '../styles/colors';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
+import StarRating from '../UI/StarRating';
+import colors from '../../styles/colors';
+import { getFullImageUrl } from '../../utils/getFullImageUrl';
 
 const ReviewItem = ({ review }) => {
+  
+  // Validate review object
+  if (!review) {
+    console.error('ReviewItem received null or undefined review');
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Invalid review data</Text>
+      </View>
+    );
+  }
+
   // Handle both object user and string user formats
   const userName = typeof review.user === 'object' ? 
     review.user?.name || 'Unknown User' : 
@@ -14,9 +25,11 @@ const ReviewItem = ({ review }) => {
   const formattedDate = review.created_at ? 
     new Date(review.created_at).toLocaleDateString() : null;
 
-
   // Show review image if available
   const reviewImage = review.images && review.images.length > 0 ? getFullImageUrl(review.images[0]) : null;
+
+  // Check if we have a valid rating
+  const rating = typeof review.rating === 'number' ? review.rating : 0;
 
   return (
     <View style={styles.container}>
@@ -24,7 +37,7 @@ const ReviewItem = ({ review }) => {
         <View style={styles.userInfo}>
           {review.user?.images && review.user.images.length > 0 ? (
             <Image 
-              source={{ uri: review.user.images[0] }} 
+              source={{ uri: getFullImageUrl(review.user.images[0]) }} 
               style={styles.userImage} 
             />
           ) : (
@@ -41,9 +54,9 @@ const ReviewItem = ({ review }) => {
             )}
           </View>
         </View>
-        <StarRating rating={review.rating} size={14} />
+        <StarRating rating={rating} size={14} />
       </View>
-      <Text style={styles.comment}>{review.comment}</Text>
+      <Text style={styles.comment}>{review.comment || 'No comment provided'}</Text>
       {reviewImage && typeof reviewImage === 'string' && (
         <Image
           source={{ uri: reviewImage }}
@@ -106,6 +119,12 @@ const styles = StyleSheet.create({
     color: colors.black,
     lineHeight: 20,
   },
+  errorText: {
+    color: colors.error || '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 10,
+  }
 });
 
 export default ReviewItem;

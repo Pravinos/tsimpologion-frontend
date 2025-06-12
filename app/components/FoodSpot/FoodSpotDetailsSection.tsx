@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import colors from '../styles/colors';
+import colors from '../../styles/colors';
 
 const FoodSpotDetailsSection = ({ address, distance, phone, website }) => (
   <>

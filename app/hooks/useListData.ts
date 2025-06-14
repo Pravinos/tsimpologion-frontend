@@ -13,7 +13,8 @@ interface UseListDataResult {
   handleRefresh: () => void;
 }
 
-const useListData = (listType: ListType): UseListDataResult => {
+// Export both as named and default
+export const useListData = (listType: ListType): UseListDataResult => {
   const queryClient = useQueryClient();
 
   // Query for food spots

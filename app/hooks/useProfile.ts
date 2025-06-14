@@ -19,7 +19,8 @@ interface UseProfileResult {
   displayRole: string;  isBusinessOwner: boolean;
 }
 
-const useProfile = (): UseProfileResult => {
+// Export both as named and default
+export const useProfile = (): UseProfileResult => {
   const { user: authUser, token } = useAuth();
   
   // React Query for user profile

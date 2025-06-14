@@ -10,7 +10,7 @@ interface IsOpenResult {
   formattedHours: BusinessHoursFormat[];
 }
 
-export const useBusinessHours = (businessHours: any): IsOpenResult => {
+const useBusinessHours = (businessHours: any): IsOpenResult => {
   const [isOpen, setIsOpen] = useState(false);
   const [formattedHours, setFormattedHours] = useState<BusinessHoursFormat[]>([]);
   
@@ -107,3 +107,5 @@ export const useBusinessHours = (businessHours: any): IsOpenResult => {
   
   return { isOpen, formattedHours };
 };
+
+export default useBusinessHours;

@@ -19,3 +19,8 @@ export const parseSocialLinks = (socialLinks: any): Record<string, string> => {
   
   return {};
 };
+
+// Add a React component as the default export to satisfy the router
+import React from 'react';
+const SocialLinksUtils = () => null;
+export default SocialLinksUtils;

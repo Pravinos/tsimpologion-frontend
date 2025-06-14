@@ -16,11 +16,10 @@ interface UseProfileResult {
   displayEmail: string;
   displayJoinDate: string;
   displayReviewsCount: number;
-  displayRole: string;
-  isBusinessOwner: boolean;
+  displayRole: string;  isBusinessOwner: boolean;
 }
 
-export const useProfile = (): UseProfileResult => {
+const useProfile = (): UseProfileResult => {
   const { user: authUser, token } = useAuth();
   
   // React Query for user profile
@@ -129,3 +128,5 @@ export const useProfile = (): UseProfileResult => {
     isBusinessOwner
   };
 };
+
+export default useProfile;

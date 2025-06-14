@@ -20,5 +20,7 @@ export function getFullImageUrl(imageObj) {
   return undefined;
 }
 
-// No default export, only named export
-// This file should not be treated as a screen or route
+// Add a React component as the default export to satisfy the router
+import React from 'react';
+const ImageUrlUtils = () => null;
+export default ImageUrlUtils;

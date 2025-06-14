@@ -45,3 +45,8 @@ export interface ScreenProps {
   navigation: NavigationProps;
   route?: RouteProp<RootStackParamList, keyof RootStackParamList>;
 }
+
+// Create a dummy React component to satisfy the router
+import React from 'react';
+const AppTypes = () => null;
+export default AppTypes;

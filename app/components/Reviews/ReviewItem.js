@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
-import { Feather } from '@expo/vector-icons'; // Added Feather icons
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Changed from Feather
 
 const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }) => {
   
@@ -76,11 +76,16 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
       {/* Like button and count */}
       {typeof review.id === 'number' && currentUserId && (
         <View style={styles.likeSection}>
-          <TouchableOpacity onPress={handleLikePress} style={styles.likeButton}>
-            <Feather 
-              name={displayIsLiked ? "heart" : "heart"} 
-              size={18} 
-              color={displayIsLiked ? colors.error : colors.darkGray} 
+          <TouchableOpacity 
+            onPress={handleLikePress} 
+            style={styles.likeButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Added hitSlop for easier tapping
+          >
+            <MaterialCommunityIcons 
+              name={displayIsLiked ? "heart" : "heart-outline"} 
+              size={24} // Adjusted size
+              color={displayIsLiked ? '#D32F2F' : colors.mediumGray} 
+              style={{ opacity: displayIsLiked ? 1 : 0.6 }} // Added opacity
             />
           </TouchableOpacity>
           <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
@@ -147,18 +152,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 10,
   },
-  likeSection: { // Added
+  likeSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8, // Ensure some space from content above
   },
-  likeButton: { // Added
-    marginRight: 6,
+  likeButton: {
+    marginRight: 5, // Space between icon and text
+    padding: 4, // Similar to favourite button padding for consistency
   },
-  likesCountText: { // Added
-    fontSize: 13,
+  likesCountText: {
+    fontSize: 14,
     color: colors.darkGray,
-  }
+  },
 });
 
 export default ReviewItem;

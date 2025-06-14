@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons'; // Ensure Feather is imported
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Changed from Feather
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
@@ -181,7 +181,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
                 setIsEditing(true);
               }}
             >
-              <Feather name="edit-2" size={16} color={colors.primary} />
+              <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
@@ -191,7 +191,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               }}
               disabled={isUpdating} // Added disabled state
             >
-              <Feather name="trash-2" size={16} color={colors.error} />
+              <MaterialCommunityIcons name="trash-can" size={16} color={colors.error} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -207,7 +207,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               {isUpdating ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Feather name="check" size={16} color={colors.white} />
+                <MaterialCommunityIcons name="check" size={16} color={colors.white} />
               )}
             </TouchableOpacity>
             <TouchableOpacity
@@ -218,7 +218,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               }}
               disabled={isUpdating}
             >
-              <Feather name="x" size={16} color={colors.white} />
+              <MaterialCommunityIcons name="close" size={16} color={colors.white} />
             </TouchableOpacity>
           </View>
         )}
@@ -285,22 +285,29 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
                 >
                   {removingImage ? 
                     <ActivityIndicator size="small" color={colors.white} /> : 
-                    <Feather name="x" size={14} color={colors.white} />
+                    <MaterialCommunityIcons name="close" size={14} color={colors.white} />
                   }
                 </TouchableOpacity>
               )}
             </View>
           )}
 
-          {/* Like button and count - Not in edit mode */}
-          {!isEditing && typeof review.id === 'number' && (
+          {/* Like button and count */}
+          {typeof review.id === 'number' && (
             <View style={styles.likeSection}>
-              <TouchableOpacity onPress={handleLikePress} style={styles.likeButton} disabled={isUpdating}>
-                <Feather 
-                  name={displayIsLiked ? "heart" : "heart"} 
-                  size={18} 
-                  color={displayIsLiked ? colors.error : colors.darkGray} 
-                  fill={displayIsLiked ? colors.error : 'none'} // Fill heart when liked
+              <TouchableOpacity 
+                onPress={(e) => { 
+                  e.stopPropagation(); // Prevent triggering edit mode if the like button is part of the touchable area
+                  handleLikePress();
+                }}
+                style={styles.likeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Added hitSlop
+              >
+                <MaterialCommunityIcons 
+                  name={displayIsLiked ? "heart" : "heart-outline"} 
+                  size={24} // Adjusted size
+                  color={displayIsLiked ? '#D32F2F' : colors.mediumGray} 
+                  style={{ opacity: displayIsLiked ? 1 : 0.6 }} // Added opacity
                 />
               </TouchableOpacity>
               <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
@@ -472,17 +479,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 10,
   },
-  likeSection: { // Added
+  likeSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 10, // Ensure some space
+    // If UserReviewItem has its main content wrapped in a View, ensure this aligns well.
+    // Consider if it should be outside the main TouchableOpacity for edit if it causes issues.
   },
-  likeButton: { // Added
-    marginRight: 6,
-    padding: 4, // Add some padding for easier touch
+  likeButton: {
+    marginRight: 5,
+    padding: 4, // Consistent padding
   },
-  likesCountText: { // Added
-    fontSize: 13,
+  likesCountText: {
+    fontSize: 14,
     color: colors.darkGray,
   },
   loadingContainer: {

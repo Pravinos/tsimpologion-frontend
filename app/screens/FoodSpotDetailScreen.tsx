@@ -28,7 +28,7 @@ import {
 // Hooks and utilities
 import { useEffect } from 'react';
 import { useAuth } from '../../services/AuthProvider';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { useBusinessHours } from '../hooks/useBusinessHours';
 import { parseSocialLinks } from '../utils/parseSocialLinks';
@@ -44,7 +44,7 @@ import {
   addFavourite, 
   removeFavourite, 
   getFavourites,
-  toggleReviewLike // Removed checkReviewLikeStatus as it's no longer needed here
+  toggleReviewLike
 } from '../../services/ApiClient';
 
 // Types and styles
@@ -122,7 +122,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     queryKey: ['favourites'],
     queryFn: async () => {
       const response = await getFavourites();
-      return response.data?.data || response.data;
+      // Ensure consistent data structure, especially if API might return null/undefined
+      return response.data?.data || response.data || []; 
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: typeof token === 'string' && !!token,
@@ -145,6 +146,55 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     (typeof review.user === 'object' && review.user?.id === user?.id)
   );
 
+  // Mutation for toggling favourite status
+  const toggleFavouriteMutation = useMutation({    
+    mutationFn: async (currentIsFavourite: boolean) => {
+      if (!foodSpot) throw new Error("Food spot not loaded");
+      if (currentIsFavourite) {
+        return removeFavourite(foodSpot.id);
+      } else {
+        return addFavourite(foodSpot.id);
+      }
+    },
+    onMutate: async (currentIsFavourite: boolean) => {
+      if (!foodSpot) return;
+
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['favourites'] });
+
+      // Snapshot the previous value
+      const previousFavourites = queryClient.getQueryData<FoodSpot[]>(['favourites']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<FoodSpot[]>(['favourites'], (oldFavourites = []) => {
+        if (currentIsFavourite) {
+          // Remove from favourites
+          return oldFavourites.filter(fs => fs.id !== foodSpot.id);
+        } else {
+          // Add to favourites
+          return [...oldFavourites, foodSpot];
+        }
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousFavourites };
+    },
+    onError: (err, currentIsFavourite, context) => {
+      Alert.alert('Error', 'Failed to update favourites.');
+      // Rollback to the previous value if mutation fails
+      if (context?.previousFavourites) {
+        queryClient.setQueryData(['favourites'], context.previousFavourites);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['favourites'] });
+      queryClient.invalidateQueries({ queryKey: ['foodSpots'] }); // In case other lists use this
+      // Optionally, refetch the specific food spot if its data includes favourite status directly
+      // queryClient.invalidateQueries({ queryKey: ['foodSpot', id] }); 
+    },
+  });
+
   // Handler to toggle favorite status
   const handleToggleFavourite = async () => {
     if (!token) {
@@ -153,21 +203,9 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
       return;
     }
     
-    if (!foodSpot) return;
-    
-    try {
-      if (isFavourite) {
-        await removeFavourite(foodSpot.id);
-      } else {
-        await addFavourite(foodSpot.id);
-      }
-      
-      // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ['favourites'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update favourites.');
-    }
+    if (!foodSpot || typeof isFavourite === 'undefined') return; // Ensure isFavourite is defined
+
+    toggleFavouriteMutation.mutate(isFavourite);
   };
 
   // Handler to submit a new review
@@ -293,7 +331,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
       return;
     }
     try {
-      // Optimistic update (optional, but good for UX)
+      // Optimistic update for the item in the current sort order
       queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
         return oldData?.map(review => {
           if (review.id === reviewId) {
@@ -308,44 +346,42 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
       });
 
       const response = await toggleReviewLike(reviewId);
-      const updatedReviewData = response.data?.review; // Assuming the backend sends back the updated review
+      const updatedReviewData = response.data?.review; 
 
-      // After the API call, update the cache with the authoritative data from the server
+      // After the API call, update the cache with the authoritative data from the server for the current sort order
       queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
         return oldData?.map(review => {
           if (review.id === reviewId) {
-            // If backend provides the full updated review, use it
             if (updatedReviewData) {
               return {
-                ...review, // keep other parts of the review object from cache if not in updatedReviewData
+                ...review,
                 ...updatedReviewData, 
-                is_liked: updatedReviewData.is_liked ?? review.is_liked, // fallback to optimistic if not present
-                likes_count: updatedReviewData.likes_count ?? review.likes_count // fallback to optimistic if not present
+                is_liked: updatedReviewData.is_liked ?? review.is_liked, // Fallback to optimistic
+                likes_count: updatedReviewData.likes_count ?? review.likes_count // Fallback to optimistic
               };
-            } else {
-              // If backend only sends success/failure, we might need to refetch or rely on optimistic update
-              // For now, let's assume the optimistic update was correct or refetch if no data came back
-              // To be more robust, the toggleReviewLike should ideally return the new like status and count.
-              // Based on your description, it does: "The toggle response includes the new like status and count"
-              // So, updatedReviewData should contain is_liked and likes_count.
-              // If not, we would refetch:
-              // queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
-              // return oldData; // or the optimistically updated data
-              // For now, assuming updatedReviewData has what we need or optimistic is fine
-              return review; // This line would be hit if updatedReviewData is null/undefined
             }
+            return review; 
           }
           return review;
         });
       });
-      // If you have other queries that depend on review like status (e.g., user's liked reviews), invalidate them too.
-      await queryClient.invalidateQueries({ queryKey: ['userReviews'] }); // If user's own reviews list shows likes
+
+      // Invalidate both sort orders to ensure fresh data and correct sorting for both.
+      // This is simpler and more robust than trying to conditionally update/invalidate only one.
+      // When the user switches sort order, they will get fresh, correctly sorted data.
+      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
+      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
+      
+      // Also invalidate user-specific reviews if they show like counts/status
+      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
 
     } catch (err: any) {
       Alert.alert('Error', 'Failed to update like status.');
       console.error('Failed to toggle review like:', err);
-      // Revert optimistic update on error
-      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
+      // Revert optimistic update on error by invalidating all relevant review queries
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
+      queryClient.invalidateQueries({ queryKey: ['userReviews'] });
     }
   };
 

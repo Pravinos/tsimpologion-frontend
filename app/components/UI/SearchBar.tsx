@@ -37,17 +37,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilt
 const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 12
   },
   searchBar: {
     flex: 1,
     height: 46,
-    backgroundColor: colors.lightGray,
+    backgroundColor: colors.white, 
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     marginRight: 12,
+    borderWidth: 1, 
+    borderColor: colors.mediumGray, // Changed from colors.primary
   },
   searchInput: {
     flex: 1,
@@ -64,7 +66,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.mediumGray, // Changed from colors.primary
   },
 });
 

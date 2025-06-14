@@ -328,31 +328,19 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.lightGray,
+    backgroundColor: colors.backgroundWarm, // Use warm background
     padding: 16,
     borderRadius: 12,
-    marginBottom: 10,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    marginBottom: 12,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
     elevation: 2,
   },
   userReviewContainer: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
+    borderColor: colors.warmAccent1, // Use warm accent for border
     borderWidth: 1,
-    borderColor: colors.lightGray,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    paddingTop: 18,
-    paddingBottom: 18,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -383,13 +371,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   userInitial: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.warmAccent1, // Use warm accent
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   initialText: {
     color: colors.white,
@@ -523,13 +511,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   userInitial: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.warmAccent1, // Use warm accent
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   initialText: {
     color: colors.white,

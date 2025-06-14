@@ -97,10 +97,15 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.lightGray,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: colors.backgroundWarm, // Use warm background
+    padding: 16, // Increased padding
+    borderRadius: 12, // Increased border radius
+    marginBottom: 12, // Adjusted margin
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1, // Subtle shadow
+    shadowRadius: 3,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -119,13 +124,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   userInitial: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
+    width: 34, // Slightly larger
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.warmAccent1, // Use warm accent for initials background
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10, // Adjusted margin
   },
   initialText: {
     color: colors.white,
@@ -158,8 +163,8 @@ const styles = StyleSheet.create({
     marginTop: 8, // Ensure some space from content above
   },
   likeButton: {
-    marginRight: 5, // Space between icon and text
-    padding: 4, // Similar to favourite button padding for consistency
+    marginRight: 5, 
+    padding: 6, // Slightly increased padding for touchability
   },
   likesCountText: {
     fontSize: 14,

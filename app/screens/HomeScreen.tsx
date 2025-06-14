@@ -183,11 +183,13 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
           onFilterPress={() => setFilterModalVisible(true)}
         />
         
-        <ListTypeSelector 
-          options={LIST_OPTIONS}
-          selectedValue={listType}
-          onSelect={handleListTypeChange}
-        />
+        <View style={styles.listTypeSelectorContainer}>
+          <ListTypeSelector 
+            options={LIST_OPTIONS}
+            selectedValue={listType}
+            onSelect={handleListTypeChange}
+          />
+        </View>
         
         {isError ? (
           <View style={styles.errorContainer}>
@@ -239,13 +241,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16, 
+    paddingTop: 16, 
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20, 
   },
   welcome: {
     fontSize: 16,
@@ -268,7 +271,11 @@ const styles = StyleSheet.create({
     width: 43, 
     height: 43, 
     borderRadius: 20, 
-    backgroundColor: colors.white
+    // Removed background color, assuming image will cover or use transparent
+  },
+  listTypeSelectorContainer: {
+    marginTop: 6,
+    marginBottom: 6,
   },
   listContent: {
     paddingBottom: 20,

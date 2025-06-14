@@ -9,4 +9,13 @@ export default {
   darkGray: '#757575', // For secondary text
   black: '#212121', // For primary text
   error: '#D32F2F', // For error messages
+
+  // New warm accent colors
+  warmAccent1: '#FFA726', // Orange
+  warmAccent2: '#FF7043', // Deep Orange
+  
+  // Subtle background colors
+  backgroundWarm: '#FFF9F2', // A very light warm off-white
+  backgroundGradientStart: '#FFF9F2', // Light warm for gradient
+  backgroundGradientEnd: '#FFEADD',   // Slightly darker warm for gradient
 };

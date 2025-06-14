@@ -47,14 +47,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   optionButton: {
-    backgroundColor: colors.lightGray,
+    backgroundColor: colors.white, 
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 20,
     marginRight: 10,
+    borderWidth: 1, 
+    borderColor: colors.mediumGray, // Changed from colors.primary
   },
   optionButtonSelected: {
     backgroundColor: colors.primary,
+    borderColor: colors.mediumGray, // Changed from colors.primary
+    borderWidth: 1, 
   },
   optionButtonText: {
     color: colors.primary,

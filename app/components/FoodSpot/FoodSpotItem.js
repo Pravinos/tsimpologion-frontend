@@ -37,23 +37,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: colors.white, // Consider using backgroundWarm for a warmer feel
+    borderRadius: 12, // Increased border radius
+    marginBottom: 12, // Adjusted margin
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 }, // Slightly increased shadow offset
+    shadowOpacity: 0.1, // Reduced shadow opacity for a more subtle effect
+    shadowRadius: 4, // Increased shadow radius for a softer shadow
+    elevation: 3, // Adjusted elevation for Android
+    borderWidth: 1, // Optional: Add a faint border
+    borderColor: colors.mediumGray, // Optional: Border color
   },
   iconContainer: {
     marginRight: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44, // Slightly larger icon container
+    height: 44, // Slightly larger icon container
+    borderRadius: 22, // Adjusted for new size
     backgroundColor: colors.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
+    // Add shadow to icon container for depth
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2, 
   },
   contentContainer: {
     flex: 1,

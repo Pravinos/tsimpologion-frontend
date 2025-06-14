@@ -1,14 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Ensure this is the only icon import
 import colors from '../../styles/colors';
 import StarRating from '../UI/StarRating';
+import { getIconForCategory } from '../../utils/categoryIcons';
 
 const FoodSpotItem = ({ item, onPress }) => {
+  const iconName = getIconForCategory(item.category);
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.iconContainer}>
-        <Feather name="map-pin" size={24} color={colors.primary} />
+        <MaterialCommunityIcons name={iconName} size={24} color={colors.primary} />
       </View>
       <View style={styles.contentContainer}>
         <Text style={styles.name}>{item.name}</Text>
@@ -23,7 +26,8 @@ const FoodSpotItem = ({ item, onPress }) => {
           </Text>
         </View>
       </View>
-      <Feather name="chevron-right" size={24} color={colors.darkGray} />
+      {/* Changed Feather to MaterialCommunityIcons for chevron-right */}
+      <MaterialCommunityIcons name="chevron-right" size={24} color={colors.darkGray} />
     </TouchableOpacity>
   );
 };

@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
+import { getIconForCategory } from '../../utils/categoryIcons'; // Import the utility
 
 
 // Add favourite star icon (filled or outline) and onPress handler
@@ -17,37 +17,41 @@ interface FoodSpotHeaderProps {
   showFavourite?: boolean;
 }
 
-const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category, price_range, isFavourite, onToggleFavourite, showFavourite }) => (
-  <View style={styles.header}>
-    <View style={styles.iconBackground}>
-      <Feather name="map-pin" size={30} color={colors.primary} />
-    </View>
-    <Text style={styles.name}>{name}</Text>
-    <View style={styles.ratingContainer}>
-      <StarRating rating={rating || 0} size={18} selectable={false} onRatingChange={() => {}} />
-      <Text style={styles.ratingText}>
-        {rating != null ? rating.toFixed(1) : 'No ratings yet'}
+const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category, price_range, isFavourite, onToggleFavourite, showFavourite }) => {
+  const iconName = getIconForCategory(category);
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.iconBackground}>
+        <MaterialCommunityIcons name={iconName} size={30} color={colors.primary} />
+      </View>
+      <Text style={styles.name}>{name}</Text>
+      <View style={styles.ratingContainer}>
+        <StarRating rating={rating || 0} size={18} selectable={false} onRatingChange={() => {}} />
+        <Text style={styles.ratingText}>
+          {rating != null ? rating.toFixed(1) : 'No ratings yet'}
+        </Text>
+        {showFavourite && (
+          <TouchableOpacity
+            style={{ marginLeft: 16, padding: 4, justifyContent: 'center', alignItems: 'center' }}
+            onPress={onToggleFavourite}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons
+              name={isFavourite ? 'heart' : 'heart-outline'}
+              color={isFavourite ? '#D32F2F' : colors.mediumGray}
+              size={30}
+              style={{ opacity: isFavourite ? 1 : 0.6 }}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+      <Text style={styles.category}>
+        {category} {price_range ? `· ${price_range}` : ''}
       </Text>
-      {showFavourite && (
-        <TouchableOpacity
-          style={{ marginLeft: 16, padding: 4, justifyContent: 'center', alignItems: 'center' }}
-          onPress={onToggleFavourite}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <MaterialCommunityIcons
-            name={isFavourite ? 'heart' : 'heart-outline'}
-            color={isFavourite ? '#D32F2F' : colors.mediumGray}
-            size={30}
-            style={{ opacity: isFavourite ? 1 : 0.6 }}
-          />
-        </TouchableOpacity>
-      )}
     </View>
-    <Text style={styles.category}>
-      {category} {price_range ? `· ${price_range}` : ''}
-    </Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   header: {

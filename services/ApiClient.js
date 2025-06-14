@@ -186,6 +186,21 @@ export const deleteReview = (foodSpotId, reviewId) =>
 export const moderateReview = (foodSpotId, reviewId, data) => 
   put(`/food-spots/${foodSpotId}/reviews/${reviewId}/moderate`, data);
 
+// --- Review Likes ---
+export const toggleReviewLike = (reviewId) =>
+  post(`/reviews/${reviewId}/like`);
+
+export const checkReviewLikeStatus = (reviewId) => // This might be deprecated if bulk is preferred
+  get(`/reviews/${reviewId}/like`);
+
+export const getReviewLikedUsers = (reviewId) =>
+  get(`/reviews/${reviewId}/likes/users`);
+
+// New endpoint for bulk checking review like statuses
+export const checkBulkReviewLikes = (reviewIds) => 
+  post(`/reviews/likes/bulk-check`, { review_ids: reviewIds });
+
+// Get user reviews
 export const getUserReviews = (userId) => {
   return get(`/users/${userId}/reviews`);
 };

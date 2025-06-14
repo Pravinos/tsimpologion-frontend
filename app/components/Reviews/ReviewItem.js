@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native'; // Added TouchableOpacity
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
+import { Feather } from '@expo/vector-icons'; // Added Feather icons
 
-const ReviewItem = ({ review }) => {
+const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }) => {
   
   // Validate review object
   if (!review) {
@@ -30,6 +31,14 @@ const ReviewItem = ({ review }) => {
 
   // Check if we have a valid rating
   const rating = typeof review.rating === 'number' ? review.rating : 0;
+  const displayLikesCount = typeof likesCount === 'number' ? likesCount : review.likes_count || 0;
+  const displayIsLiked = typeof isLiked === 'boolean' ? isLiked : review.is_liked || false;
+
+  const handleLikePress = () => {
+    if (onToggleLike && typeof review.id === 'number') {
+      onToggleLike(review.id);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -63,6 +72,19 @@ const ReviewItem = ({ review }) => {
           style={{ width: 120, height: 120, borderRadius: 10, marginTop: 8 }}
           resizeMode="cover"
         />
+      )}
+      {/* Like button and count */}
+      {typeof review.id === 'number' && currentUserId && (
+        <View style={styles.likeSection}>
+          <TouchableOpacity onPress={handleLikePress} style={styles.likeButton}>
+            <Feather 
+              name={displayIsLiked ? "heart" : "heart"} 
+              size={18} 
+              color={displayIsLiked ? colors.error : colors.darkGray} 
+            />
+          </TouchableOpacity>
+          <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
+        </View>
       )}
     </View>
   );
@@ -124,6 +146,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     padding: 10,
+  },
+  likeSection: { // Added
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  likeButton: { // Added
+    marginRight: 6,
+  },
+  likesCountText: { // Added
+    fontSize: 13,
+    color: colors.darkGray,
   }
 });
 

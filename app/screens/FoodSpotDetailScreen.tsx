@@ -1,7 +1,7 @@
-// filepath: c:\tsimpologion-app\tsimpologion-frontend\app\screens\FoodSpotDetailScreen.tsx
+// filepath: c:\\tsimpologion-app\\tsimpologion-frontend\\app\\screens\\FoodSpotDetailScreen.tsx
 import React, { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { ScrollView, FlatList } from 'react-native';
+import { ScrollView } from 'react-native';
 import {
   StyleSheet,
   View,
@@ -43,7 +43,8 @@ import {
   uploadImage, 
   addFavourite, 
   removeFavourite, 
-  getFavourites 
+  getFavourites,
+  toggleReviewLike // Removed checkReviewLikeStatus as it's no longer needed here
 } from '../../services/ApiClient';
 
 // Types and styles
@@ -66,7 +67,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   // State for review submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  
+  const [sortOrder, setSortOrder] = useState<'recent' | 'liked'>('recent'); // Added
+
   // React Query for food spot details
   const {
     data: foodSpot,
@@ -89,10 +91,25 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     isError: isReviewsError,
     refetch: refetchReviews,
   } = useQuery<Review[]>({
-    queryKey: ['foodSpotReviews', id],
+    queryKey: ['foodSpotReviews', id, sortOrder], // Include sortOrder in queryKey
     queryFn: async () => {
-      const response = await getReviews(id);
-      return response.data?.data || response.data;
+      let apiParams = {};
+      if (sortOrder === 'liked') {
+        apiParams = { sort: 'most_liked' };
+      } else if (sortOrder === 'recent') {
+        apiParams = { sort: 'recent' }; // Updated to use 'recent' for sorting by most recent
+      }
+      // If your backend defaults to most_recent (or just 'recent') when no sort param is given,
+      // and you only want to send a sort param for \'most_liked\', you could adjust logic further.
+      // For now, it explicitly sends sort='recent' or sort='most_liked'.
+
+      const response = await getReviews(id, apiParams);
+      const reviewsData = response.data?.data || response.data || [];
+      return reviewsData.map((review: Review) => ({
+        ...review,
+        is_liked: review.is_liked ?? false,
+        likes_count: review.likes_count ?? 0,
+      }));
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
@@ -268,6 +285,71 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     }
   };
 
+  // Handler to toggle review like
+  const handleToggleReviewLike = async (reviewId: number) => {
+    if (!token) {
+      Alert.alert('Login Required', 'Please log in to like reviews.');
+      navigation.navigate('Profile');
+      return;
+    }
+    try {
+      // Optimistic update (optional, but good for UX)
+      queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
+        return oldData?.map(review => {
+          if (review.id === reviewId) {
+            return {
+              ...review,
+              is_liked: !review.is_liked,
+              likes_count: review.is_liked ? (review.likes_count || 1) - 1 : (review.likes_count || 0) + 1,
+            };
+          }
+          return review;
+        });
+      });
+
+      const response = await toggleReviewLike(reviewId);
+      const updatedReviewData = response.data?.review; // Assuming the backend sends back the updated review
+
+      // After the API call, update the cache with the authoritative data from the server
+      queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
+        return oldData?.map(review => {
+          if (review.id === reviewId) {
+            // If backend provides the full updated review, use it
+            if (updatedReviewData) {
+              return {
+                ...review, // keep other parts of the review object from cache if not in updatedReviewData
+                ...updatedReviewData, 
+                is_liked: updatedReviewData.is_liked ?? review.is_liked, // fallback to optimistic if not present
+                likes_count: updatedReviewData.likes_count ?? review.likes_count // fallback to optimistic if not present
+              };
+            } else {
+              // If backend only sends success/failure, we might need to refetch or rely on optimistic update
+              // For now, let's assume the optimistic update was correct or refetch if no data came back
+              // To be more robust, the toggleReviewLike should ideally return the new like status and count.
+              // Based on your description, it does: "The toggle response includes the new like status and count"
+              // So, updatedReviewData should contain is_liked and likes_count.
+              // If not, we would refetch:
+              // queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
+              // return oldData; // or the optimistically updated data
+              // For now, assuming updatedReviewData has what we need or optimistic is fine
+              return review; // This line would be hit if updatedReviewData is null/undefined
+            }
+          }
+          return review;
+        });
+      });
+      // If you have other queries that depend on review like status (e.g., user's liked reviews), invalidate them too.
+      await queryClient.invalidateQueries({ queryKey: ['userReviews'] }); // If user's own reviews list shows likes
+
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to update like status.');
+      console.error('Failed to toggle review like:', err);
+      // Revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
+    }
+  };
+
+
   // Loading state
   if (isLoadingSpot) {
     return (
@@ -389,8 +471,9 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
           <View style={styles.section}>
             <View style={styles.reviewHeader}>
               <Text style={styles.sectionTitle}>Reviews</Text>
-              <Text style={styles.reviewCount}>{reviews.length} Reviews</Text>
+              {/* Sort buttons and review count will be moved to ReviewsSection */}
             </View>
+            {/* <Text style={styles.reviewCount}>{Array.isArray(reviews) ? reviews.length : 0} Reviews</Text> */}
             
             <ReviewsSection 
               reviews={reviews}
@@ -398,6 +481,10 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
               userId={user?.id}
               onUpdateReview={handleUpdateReview}
               onDeleteReview={handleDeleteReview}
+              onToggleLike={handleToggleReviewLike}
+              currentSortOrder={sortOrder} // Pass sortOrder state
+              onSortOrderChange={setSortOrder} // Pass setSortOrder function
+              totalReviewCount={Array.isArray(reviews) ? reviews.length : 0} // Pass total review count
             />
           </View>
           
@@ -456,14 +543,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    // flexDirection: 'column', // Keep or adjust as needed, sectionTitle is now alone here
     marginBottom: 15,
-  },
-  reviewCount: {
-    fontSize: 14,
-    color: colors.darkGray,
   },
   loadingContainer: {
     flex: 1,

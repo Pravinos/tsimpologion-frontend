@@ -29,6 +29,11 @@ export interface FoodSpot {
   deleted_at?: string; // For soft deletes
   created_at: string;
   updated_at: string;
+  business_hours?: any; // Added
+  social_links?: any; // Added
+  price_range?: string; // Added
+  distance?: number; // Added
+  phone?: string; // Added
 }
 
 /**
@@ -46,6 +51,8 @@ export interface Review {
   created_at: string;
   updated_at: string;
   user?: User;
+  likes_count?: number;
+  is_liked?: boolean;
 }
 
 /**

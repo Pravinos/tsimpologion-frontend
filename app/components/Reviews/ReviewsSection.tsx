@@ -11,6 +11,10 @@ interface ReviewsProps {
   userId?: number | null;
   onUpdateReview: (reviewId: number, data: { rating: number; comment: string }) => Promise<void>;
   onDeleteReview: (reviewId: number) => Promise<void>;
+  onToggleLike: (reviewId: number) => Promise<void>; 
+  currentSortOrder?: 'recent' | 'liked'; 
+  onSortOrderChange: (sortOrder: 'recent' | 'liked') => void; // Added
+  totalReviewCount: number; // Added
 }
 
 const ReviewsSection: React.FC<ReviewsProps> = ({
@@ -18,7 +22,11 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
   isLoading,
   userId,
   onUpdateReview,
-  onDeleteReview
+  onDeleteReview,
+  onToggleLike, 
+  currentSortOrder,
+  onSortOrderChange, // Added
+  totalReviewCount // Added
 }) => {
   // Data validation
   if (!reviews || !Array.isArray(reviews)) {
@@ -43,8 +51,8 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
         review.user_id !== userId &&
         !(typeof review.user === 'object' && review.user?.id === userId)
       )
-    )
-    .sort((a: Review, b: Review) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    );
+    // Sorting is now handled by the query in FoodSpotDetailScreen based on currentSortOrder
   
   if (isLoading) {
     return (
@@ -65,35 +73,64 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
             review={userReview}
             onUpdate={onUpdateReview}
             onDelete={onDeleteReview}
+            onToggleLike={onToggleLike} // Pass handler
+            isLiked={userReview.is_liked} // Pass isLiked
+            likesCount={userReview.likes_count} // Pass likesCount
           />
         </View>
       )}
       
       {/* Other users' reviews section */}
-      {otherReviews.length > 0 ? (
+      {otherReviews.length > 0 || userReview ? ( // Show this section if there are other reviews OR if there's a user review (to show sort options)
         <View style={styles.otherReviewsSection}>
-          {userReview && (
-            <Text style={styles.otherReviewsTitle}>Other Reviews</Text>
+          <View style={styles.otherReviewsHeader}>
+            <Text style={styles.otherReviewsTitle}>
+              {userReview ? 'Other Reviews' : 'Reviews'}
+            </Text>
+            <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
+          </View>
+
+          <View style={styles.reviewActions}> 
+            <Text style={styles.sortByText}>Sort by:</Text>
+            <TouchableOpacity onPress={() => onSortOrderChange('recent')} style={[styles.sortButton, currentSortOrder === 'recent' && styles.activeSortButton]}>
+              <Text style={[styles.sortButtonText, currentSortOrder === 'recent' && styles.activeSortButtonText]}>Most Recent</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onSortOrderChange('liked')} style={[styles.sortButton, currentSortOrder === 'liked' && styles.activeSortButton]}>
+              <Text style={[styles.sortButtonText, currentSortOrder === 'liked' && styles.activeSortButtonText]}>Most Liked</Text>
+            </TouchableOpacity>
+          </View>
+
+          {otherReviews.length > 0 ? (
+            <FlatList
+              data={otherReviews}
+              keyExtractor={(item: Review) => item.id.toString()}
+              renderItem={({ item }: { item: Review }) => (
+                <View style={styles.reviewItemContainer}>
+                  <ReviewItem 
+                    review={item} 
+                    onToggleLike={onToggleLike} 
+                    isLiked={item.is_liked} 
+                    likesCount={item.likes_count} 
+                    currentUserId={userId}
+                  />
+                </View>
+              )}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              initialNumToRender={3}
+              contentContainerStyle={{ paddingVertical: 4 }}
+            />
+          ) : (
+            <Text style={styles.noReviewsText}>
+              {/* This text will show if there's a user review but no other reviews */}
+              No other reviews yet.
+            </Text>
           )}
-          <FlatList
-            data={otherReviews}
-            keyExtractor={(item: Review) => item.id.toString()}
-            renderItem={({ item }: { item: Review }) => (
-              <View style={styles.reviewItemContainer}>
-                <ReviewItem review={item} />
-              </View>
-            )}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            initialNumToRender={3}
-            contentContainerStyle={{ paddingVertical: 4 }}
-          />
         </View>
       ) : (
         <Text style={styles.noReviewsText}>
-          {reviews.length === 0
-            ? 'No reviews yet. Be the first to leave a review!'
-            : 'No other reviews yet.'}
+          {/* This text will show if there are no reviews at all (neither user's nor others) */}
+          No reviews yet. Be the first to leave a review!
         </Text>
       )}
     </>
@@ -121,11 +158,51 @@ const styles = StyleSheet.create({
   otherReviewsSection: {
     marginTop: 10,
   },
+  otherReviewsHeader: { // Added
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   otherReviewsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
     color: colors.black,
+  },
+  reviewCountText: { // Added (similar to old reviewCount style)
+    fontSize: 14,
+    color: colors.darkGray,
+  },
+  reviewActions: { // Added (styles from FoodSpotDetailScreen)
+    flexDirection: 'row',
+    justifyContent: 'flex-start', // Changed from flex-end to flex-start
+    alignItems: 'center', 
+    marginBottom: 12, 
+  },
+  sortByText: { // Added style for Sort by text
+    fontSize: 14,
+    color: colors.darkGray,
+    fontWeight: '600',
+    marginRight: 8, // Added marginRight to space it from the first button
+  },
+  sortButton: { // Added (styles from FoodSpotDetailScreen)
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    backgroundColor: colors.lightGray,
+    marginLeft: 0, // Was 8, set to 0 as sortByText now has marginRight
+    marginRight: 8, // Added marginRight for spacing between buttons
+  },
+  activeSortButton: { // Added (styles from FoodSpotDetailScreen)
+    backgroundColor: colors.primary,
+  },
+  sortButtonText: { // Added (styles from FoodSpotDetailScreen)
+    fontSize: 12,
+    color: colors.darkGray,
+    fontWeight: '600',
+  },
+  activeSortButtonText: { // Added (styles from FoodSpotDetailScreen)
+    color: colors.white,
   },
   reviewItemContainer: {
     width: 280,

@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons'; // Ensure Feather is imported
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import { deleteImage } from '../../../services/ApiClient';
 
-const UserReviewItem = ({ review, onUpdate, onDelete }) => {
+const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, likesCount }) => {
 
   // Validate review object
   if (!review) {
@@ -24,6 +23,10 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
   const [editComment, setEditComment] = useState(review.comment || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Determine initial like state and count from props or review object
+  const displayLikesCount = typeof likesCount === 'number' ? likesCount : review.likes_count || 0;
+  const displayIsLiked = typeof isLiked === 'boolean' ? isLiked : review.is_liked || false;
 
   // Handle both object user and string user formats
   const userName = typeof review.user === 'object' ? 
@@ -96,6 +99,12 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
     );
   };
 
+  const handleLikePress = () => {
+    if (onToggleLike && typeof review.id === 'number') {
+      onToggleLike(review.id);
+    }
+  };
+
   if (isDeleting) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -146,7 +155,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
         <View style={styles.userInfo}>
           {review.user?.images && review.user.images.length > 0 ? (
             <Image 
-              source={{ uri: review.user.images[0] }} 
+              source={{ uri: getFullImageUrl(review.user.images[0]) }} // Corrected: use getFullImageUrl
               style={styles.userImage} 
             />
           ) : (
@@ -180,6 +189,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
                 e.stopPropagation();
                 handleDelete();
               }}
+              disabled={isUpdating} // Added disabled state
             >
               <Feather name="trash-2" size={16} color={colors.error} />
             </TouchableOpacity>
@@ -188,7 +198,10 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, styles.saveButton]}
-              onPress={handleSave}
+              onPress={(e) => { 
+                e.stopPropagation(); 
+                handleSave(); 
+              }}
               disabled={isUpdating}
             >
               {isUpdating ? (
@@ -199,7 +212,10 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.cancelButton]}
-              onPress={handleCancel}
+              onPress={(e) => { 
+                e.stopPropagation(); 
+                handleCancel(); 
+              }}
               disabled={isUpdating}
             >
               <Feather name="x" size={16} color={colors.white} />
@@ -220,12 +236,12 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
             />
           </View>
           <TextInput
-            style={styles.editInput}
+            style={styles.commentInput}
             value={editComment}
             onChangeText={setEditComment}
+            placeholder="Write your review..."
             multiline
-            placeholder="Edit your review..."
-            editable={!isUpdating}
+            editable={!isUpdating} // Added editable state
           />
           {reviewImage && (
             <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -253,14 +269,44 @@ const UserReviewItem = ({ review, onUpdate, onDelete }) => {
           <View style={styles.ratingRow}>
             <StarRating rating={review.rating} size={14} />
           </View>
-          <Text style={styles.comment}>{review.comment}</Text>
+          <Text style={styles.comment}>{review.comment || 'No comment provided'}</Text>
           {reviewImage && typeof reviewImage === 'string' && (
-            <Image
-              source={{ uri: reviewImage }}
-              style={{ width: 120, height: 120, borderRadius: 10, marginTop: 8 }}
-              resizeMode="cover"
-            />
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: reviewImage }}
+                style={styles.reviewImage}
+                resizeMode="cover"
+              />
+              {isEditing && (
+                <TouchableOpacity 
+                  style={styles.removeImageButton} 
+                  onPress={handleRemoveImage}
+                  disabled={removingImage || isUpdating} // Added disabled state
+                >
+                  {removingImage ? 
+                    <ActivityIndicator size="small" color={colors.white} /> : 
+                    <Feather name="x" size={14} color={colors.white} />
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
           )}
+
+          {/* Like button and count - Not in edit mode */}
+          {!isEditing && typeof review.id === 'number' && (
+            <View style={styles.likeSection}>
+              <TouchableOpacity onPress={handleLikePress} style={styles.likeButton} disabled={isUpdating}>
+                <Feather 
+                  name={displayIsLiked ? "heart" : "heart"} 
+                  size={18} 
+                  color={displayIsLiked ? colors.error : colors.darkGray} 
+                  fill={displayIsLiked ? colors.error : 'none'} // Fill heart when liked
+                />
+              </TouchableOpacity>
+              <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
+            </View>
+          )}
+
         </View>
       )}
 
@@ -390,7 +436,145 @@ const styles = StyleSheet.create({
     marginRight: 8,
     fontWeight: 'bold',
   },
-  editInput: {
+  commentInput: {
+    minHeight: 60,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: colors.white,
+    textAlignVertical: 'top',
+    fontSize: 14,
+  },
+  reviewContent: {
+    marginTop: 4,
+    paddingLeft: 2,
+  },
+  ratingRow: {
+    marginBottom: 6,
+  },
+  comment: {
+    fontSize: 14,
+    color: colors.black,
+    lineHeight: 20,
+  },
+  tapHint: {
+    marginTop: 8,
+    alignItems: 'center',
+  },  tapHintText: {
+    fontSize: 12,
+    color: colors.darkGray,
+    fontStyle: 'italic',
+  },
+  errorText: {
+    color: colors.error || '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 10,
+  },
+  likeSection: { // Added
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  likeButton: { // Added
+    marginRight: 6,
+    padding: 4, // Add some padding for easier touch
+  },
+  likesCountText: { // Added
+    fontSize: 13,
+    color: colors.darkGray,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.darkGray,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 8,
+  },
+  userInitial: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  initialText: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  username: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  date: {
+    fontSize: 12,
+    color: colors.darkGray,
+    marginBottom: 6,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  saveButton: {
+    backgroundColor: colors.success || colors.primary,
+  },
+  cancelButton: {
+    backgroundColor: colors.mediumGray,
+  },
+  editMode: {
+    marginTop: 8,
+  },
+  ratingSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ratingLabel: {
+    fontSize: 14,
+    marginRight: 8,
+    fontWeight: 'bold',
+  },
+  commentInput: {
     minHeight: 60,
     borderWidth: 1,
     borderColor: colors.mediumGray,

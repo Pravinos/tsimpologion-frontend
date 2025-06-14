@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons'; // Changed from Feather
 import StarRating from '../UI/StarRating';
@@ -23,6 +23,8 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   const [editComment, setEditComment] = useState(review.comment || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isProcessingLike, setIsProcessingLike] = useState(false); 
+  const isLikeCoolingDownRef = useRef(false); // Added ref for like cooldown
 
   // Determine initial like state and count from props or review object
   const displayLikesCount = typeof likesCount === 'number' ? likesCount : review.likes_count || 0;
@@ -100,8 +102,16 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   };
 
   const handleLikePress = () => {
+    if (isLikeCoolingDownRef.current) return;
+
     if (onToggleLike && typeof review.id === 'number') {
+      isLikeCoolingDownRef.current = true;
+      setIsProcessingLike(true);
       onToggleLike(review.id);
+      setTimeout(() => {
+        isLikeCoolingDownRef.current = false;
+        setIsProcessingLike(false);
+      }, 2000);
     }
   };
 
@@ -297,17 +307,18 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
             <View style={styles.likeSection}>
               <TouchableOpacity 
                 onPress={(e) => { 
-                  e.stopPropagation(); // Prevent triggering edit mode if the like button is part of the touchable area
+                  e.stopPropagation(); 
                   handleLikePress();
                 }}
                 style={styles.likeButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Added hitSlop
+                disabled={isProcessingLike} // Added disabled state
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <MaterialCommunityIcons 
                   name={displayIsLiked ? "heart" : "heart-outline"} 
-                  size={24} // Adjusted size
-                  color={displayIsLiked ? '#D32F2F' : colors.mediumGray} 
-                  style={{ opacity: displayIsLiked ? 1 : 0.6 }} // Added opacity
+                  size={24} 
+                  color={isProcessingLike ? colors.mediumGray : (displayIsLiked ? '#D32F2F' : colors.mediumGray)} // Dim color when liking
+                  style={{ opacity: displayIsLiked && !isProcessingLike ? 1 : 0.6 }} // Adjust opacity based on liking state
                 />
               </TouchableOpacity>
               <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>

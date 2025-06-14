@@ -42,14 +42,12 @@ const styles = StyleSheet.create({
   searchBar: {
     flex: 1,
     height: 46,
-    backgroundColor: colors.white, 
+    backgroundColor: colors.lightGray,
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     marginRight: 12,
-    borderWidth: 1, 
-    borderColor: colors.mediumGray, // Changed from colors.primary
   },
   searchInput: {
     flex: 1,

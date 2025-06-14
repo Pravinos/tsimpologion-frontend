@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react'; // Added useState, useRef
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '../UI/StarRating';
@@ -19,6 +19,21 @@ interface FoodSpotHeaderProps {
 
 const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category, price_range, isFavourite, onToggleFavourite, showFavourite }) => {
   const iconName = getIconForCategory(category);
+  const [isProcessingFavourite, setIsProcessingFavourite] = useState(false);
+  const isFavouriteCoolingDownRef = useRef(false);
+
+  const handleToggleFavourite = () => {
+    if (isFavouriteCoolingDownRef.current || !onToggleFavourite) return;
+
+    isFavouriteCoolingDownRef.current = true;
+    setIsProcessingFavourite(true);
+    onToggleFavourite(); 
+
+    setTimeout(() => {
+      isFavouriteCoolingDownRef.current = false;
+      setIsProcessingFavourite(false);
+    }, 2000);
+  };
 
   return (
     <View style={styles.header}>
@@ -34,14 +49,15 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
         {showFavourite && (
           <TouchableOpacity
             style={{ marginLeft: 16, padding: 4, justifyContent: 'center', alignItems: 'center' }}
-            onPress={onToggleFavourite}
+            onPress={handleToggleFavourite} // Use the new handler
+            disabled={isProcessingFavourite} // Disable during cooldown
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <MaterialCommunityIcons
               name={isFavourite ? 'heart' : 'heart-outline'}
-              color={isFavourite ? '#D32F2F' : colors.mediumGray}
+              color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? '#D32F2F' : colors.mediumGray)} // Dim color during cooldown
               size={30}
-              style={{ opacity: isFavourite ? 1 : 0.6 }}
+              style={{ opacity: isProcessingFavourite ? 0.6 : (isFavourite ? 1 : 0.6) }} // Adjust opacity during cooldown
             />
           </TouchableOpacity>
         )}

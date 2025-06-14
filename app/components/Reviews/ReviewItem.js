@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react'; // Added useRef
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
@@ -6,6 +6,8 @@ import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import { MaterialCommunityIcons } from '@expo/vector-icons'; // Changed from Feather
 
 const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }) => {
+  const [isLiking, setIsLiking] = useState(false);
+  const isCoolingDownRef = useRef(false);
   
   // Validate review object
   if (!review) {
@@ -35,8 +37,16 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
   const displayIsLiked = typeof isLiked === 'boolean' ? isLiked : review.is_liked || false;
 
   const handleLikePress = () => {
+    if (isCoolingDownRef.current) return;
+
     if (onToggleLike && typeof review.id === 'number') {
+      isCoolingDownRef.current = true;
+      setIsLiking(true);
       onToggleLike(review.id);
+      setTimeout(() => {
+        isCoolingDownRef.current = false;
+        setIsLiking(false);
+      }, 2000);
     }
   };
 
@@ -79,13 +89,14 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
           <TouchableOpacity 
             onPress={handleLikePress} 
             style={styles.likeButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Added hitSlop for easier tapping
+            disabled={isLiking} // Added disabled state
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <MaterialCommunityIcons 
               name={displayIsLiked ? "heart" : "heart-outline"} 
-              size={24} // Adjusted size
-              color={displayIsLiked ? '#D32F2F' : colors.mediumGray} 
-              style={{ opacity: displayIsLiked ? 1 : 0.6 }} // Added opacity
+              size={24} 
+              color={isLiking ? colors.mediumGray : (displayIsLiked ? '#D32F2F' : colors.mediumGray)} // Dim color when liking
+              style={{ opacity: displayIsLiked && !isLiking ? 1 : 0.6 }} // Adjust opacity based on liking state
             />
           </TouchableOpacity>
           <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>

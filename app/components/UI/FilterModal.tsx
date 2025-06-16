@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Modal } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'; // Added TouchableWithoutFeedback
+import { MaterialCommunityIcons } from '@expo/vector-icons'; // Added for close icon
 import colors from '../../styles/colors';
 
 interface FilterModalProps {
@@ -27,57 +28,64 @@ const FilterModal: React.FC<FilterModalProps> = ({
     visible={visible}
     animationType="slide"
     transparent={true}
-    onRequestClose={onClose}
+    onRequestClose={onClose} // This handles the Android back button
   >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Filter & Sort</Text>
-        <Text style={styles.modalLabel}>Category</Text>
-        <View style={styles.buttonListRow}>
-          <TouchableOpacity
-            style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
-            onPress={() => setSelectedCategory('')}
-          >
-            <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
-          </TouchableOpacity>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
-              onPress={() => setSelectedCategory(cat)}
-            >
-              <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>{cat}</Text>
+    <TouchableWithoutFeedback onPress={onClose}> 
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}> 
+          <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={24} color={colors.darkGray} />
             </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.modalLabel}>Sort by Rating</Text>
-        <View style={styles.buttonListRow}>
-          {sortOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.optionButton, sortDirection === opt.value && styles.optionButtonSelected]}
-              onPress={() => setSortDirection(opt.value as 'asc' | 'desc')}
-            >
-              <Text style={[styles.optionButtonText, sortDirection === opt.value && styles.optionButtonTextSelected]}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={onClose}
-          >
-            <Text style={styles.modalButtonText}>Apply</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButton, { backgroundColor: colors.error }]}
-            onPress={() => { setSelectedCategory(''); setSortDirection('desc'); onClose(); }}
-          >
-            <Text style={styles.modalButtonText}>Clear</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.modalTitle}>Filter & Sort</Text>
+            <Text style={styles.modalLabel}>Category</Text>
+            <View style={styles.buttonListRow}>
+              <TouchableOpacity
+                style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
+                onPress={() => setSelectedCategory('')}
+              >
+                <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
+              </TouchableOpacity>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
+                  onPress={() => setSelectedCategory(cat)}
+                >
+                  <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.modalLabel}>Sort by Rating</Text>
+            <View style={styles.buttonListRow}>
+              {sortOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.optionButton, sortDirection === opt.value && styles.optionButtonSelected]}
+                  onPress={() => setSortDirection(opt.value as 'asc' | 'desc')}
+                >
+                  <Text style={[styles.optionButtonText, sortDirection === opt.value && styles.optionButtonTextSelected]}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={onClose}
+              >
+                <Text style={styles.modalButtonText}>Apply</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.error }]}
+                onPress={() => { setSelectedCategory(''); setSortDirection('desc'); onClose(); }}
+              >
+                <Text style={styles.modalButtonText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   </Modal>
 );
 
@@ -94,7 +102,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
-    alignItems: 'center',
+    // alignItems: 'center', // Removed to allow close button to be top-right
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 5, // Add some padding for easier touch
+    zIndex: 1, // Ensure it's above other elements if needed
   },
   modalTitle: {
     fontSize: 18,

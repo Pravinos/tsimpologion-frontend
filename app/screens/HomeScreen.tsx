@@ -172,7 +172,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>        
+      <View style={styles.container}>
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>
@@ -180,7 +180,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             </Text>
             <Text style={styles.title}>Tsimpologion</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileButton}
             onPress={() => navigation.navigate('Profile')}
           >
@@ -191,28 +191,25 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-        
-        <SearchBar 
+        <SearchBar
           searchText={searchText}
           setSearchText={setSearchText}
           onFilterPress={() => setFilterModalVisible(true)}
         />
-        
         <View style={styles.listTypeSelectorContainer}>
-          <ListTypeSelector 
+          <ListTypeSelector
             options={LIST_OPTIONS}
             selectedValue={listType}
             onSelect={handleListTypeChange}
           />
         </View>
-        
         {isError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
               Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
             </Text>
-            <TouchableOpacity 
-              style={styles.retryButton} 
+            <TouchableOpacity
+              style={styles.retryButton}
               onPress={() => refetch()}
             >
               <Text style={styles.retryText}>Try Again</Text>
@@ -228,11 +225,13 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             refreshing={isFetching}
             onRefresh={handleRefresh}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>
-              </Text>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No results found</Text>
+              </View>
             }
           />
-        )}        <FilterModal
+        )}
+        <FilterModal
           visible={filterModalVisible}
           onClose={() => setFilterModalVisible(false)}
           selectedCategory={selectedCategory}
@@ -301,7 +300,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   loadingText: {
     marginTop: 10,
@@ -312,29 +310,42 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   errorText: {
     fontSize: 16,
     color: colors.error,
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 20,
   },
   retryText: {
     color: colors.white,
+    fontSize: 16,
     fontWeight: 'bold',
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+    paddingHorizontal: 20,
+  },
   emptyText: {
-    textAlign: 'center',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
     color: colors.darkGray,
-    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: colors.mediumGray,
+    textAlign: 'center',
+    marginTop: 8,
   },
   section: {
     backgroundColor: colors.white,

@@ -29,8 +29,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
   setSortDirection,
   priceSortDirection,
   setPriceSortDirection,
-  categories,
-  sortOptions,
+  categories = [], // Add default empty array
+  sortOptions = [], // Add default empty array
 }) => {
   const priceRangeOptions = [
     { label: 'All', value: '' },
@@ -63,22 +63,22 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     onPress={() => setSelectedCategory('')}
                   >
                     <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
-                  </TouchableOpacity>
-                  {categories.filter(cat => cat).map((cat) => (
+                  </TouchableOpacity>{categories.filter(cat => cat && cat.trim()).map((cat) => (
                     <TouchableOpacity
                       key={cat}
                       style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
                       onPress={() => setSelectedCategory(cat)}
                     >
-                      <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>{cat}</Text>
+                      <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>
+                        {cat}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Price Range</Text>
-                <View style={styles.buttonListRow}>
-                  {priceRangeOptions.map((opt) => (
+                <Text style={styles.modalLabel}>Price Range</Text><View style={styles.buttonListRow}>
+                  {priceRangeOptions.filter(opt => opt && opt.label).map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[styles.optionButton, selectedPriceRange === opt.value && styles.optionButtonSelected]}
@@ -91,24 +91,24 @@ const FilterModal: React.FC<FilterModalProps> = ({
                   ))}
                 </View>
               </View>
-              <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Sort by Rating</Text>
+              <View style={styles.filterSection}><Text style={styles.modalLabel}>Sort by Rating</Text>
                 <View style={styles.buttonListRow}>
-                  {sortOptions.map((opt) => (
+                  {sortOptions.filter(opt => opt && opt.label && opt.value !== undefined).map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[styles.optionButton, sortDirection === opt.value && styles.optionButtonSelected]}
                       onPress={() => setSortDirection(opt.value as 'asc' | 'desc')}
                     >
-                      <Text style={[styles.optionButtonText, sortDirection === opt.value && styles.optionButtonTextSelected]}>{opt.label}</Text>
+                      <Text style={[styles.optionButtonText, sortDirection === opt.value && styles.optionButtonTextSelected]}>
+                        {opt.label}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Sort by Price</Text>
-                <View style={styles.buttonListRow}>
-                  {priceSortOptions.map((opt) => (
+                <Text style={styles.modalLabel}>Sort by Price</Text><View style={styles.buttonListRow}>
+                  {priceSortOptions.filter(opt => opt && opt.label && opt.value !== undefined).map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[styles.optionButton, priceSortDirection === opt.value && styles.optionButtonSelected]}

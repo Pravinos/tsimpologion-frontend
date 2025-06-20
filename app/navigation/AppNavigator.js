@@ -59,7 +59,6 @@ function HomeTabs() {
         name="Profile" 
         component={ProfileScreen} 
       />
-      {/* Add more screens here */}
     </Tab.Navigator>
   );
 }

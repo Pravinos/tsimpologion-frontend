@@ -48,7 +48,9 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedPriceRange, setSelectedPriceRange] = useState(''); // Added price range state
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>(''); // Added price sort state
 
   // Query for food spots
   const {
@@ -100,25 +102,38 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     return Array.from(set).sort();
   }, [currentData]);
 
-  // Filter and sort food spots based on search, category, and sort direction
+  // Filter and sort food spots based on search, category, price range, and sort direction
   const filteredFoodSpots = useMemo(() => {
     let filtered = currentData.filter((spot: FoodSpot) => {
       const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
       const matchesCategory = !selectedCategory || 
         (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-      return matchesSearch && matchesCategory;
+      const matchesPriceRange = !selectedPriceRange || spot.price_range === selectedPriceRange; // Added price range filter
+      return matchesSearch && matchesCategory && matchesPriceRange;
     });
-    
-    filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
+      filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
+      // Price sorting takes priority if selected
+      if (priceSortDirection && a.price_range && b.price_range) {
+        const priceOrder = ['$', '$$', '$$$'];
+        const aPrice = priceOrder.indexOf(a.price_range);
+        const bPrice = priceOrder.indexOf(b.price_range);
+        
+        if (priceSortDirection === 'asc') {
+          return aPrice - bPrice; // Cheapest first
+        } else {
+          return bPrice - aPrice; // Most expensive first
+        }
+      }
+      
+      // Default to rating sorting
       if (sortDirection === 'asc') {
         return (a.rating || 0) - (b.rating || 0);
       } else {
         return (b.rating || 0) - (a.rating || 0);
       }
     });
-    
-    return filtered;
-  }, [currentData, searchText, selectedCategory, sortDirection]);
+      return filtered;
+  }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]); // Added priceSortDirection to dependencies
 
   const handleRefresh = useCallback(() => {
     if (listType === 'favourites') {
@@ -217,15 +232,17 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               </Text>
             }
           />
-        )}
-
-        <FilterModal
+        )}        <FilterModal
           visible={filterModalVisible}
           onClose={() => setFilterModalVisible(false)}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
+          selectedPriceRange={selectedPriceRange} // Added price range props
+          setSelectedPriceRange={setSelectedPriceRange} // Added price range props
           sortDirection={sortDirection}
           setSortDirection={setSortDirection}
+          priceSortDirection={priceSortDirection} // Added price sort props
+          setPriceSortDirection={setPriceSortDirection} // Added price sort props
           categories={categories}
           sortOptions={SORT_OPTIONS}
         />

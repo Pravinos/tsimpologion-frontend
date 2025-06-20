@@ -6,6 +6,7 @@ export interface FoodSpot {
   category: string;
   city: string;
   rating?: number;
+  price_range?: string; // Added price_range property
   images?: {
     id: number;
     url: string;

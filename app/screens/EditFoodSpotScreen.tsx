@@ -184,6 +184,7 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
       // 4. Invalidate queries and show success
       await queryClient.invalidateQueries({ queryKey: ['foodSpot', foodSpotId] });
+      await queryClient.invalidateQueries({ queryKey: ['spotImages', foodSpotId] });
       await queryClient.invalidateQueries({ queryKey: ['mySpots'] });
       Alert.alert('Success', 'Food spot updated successfully.');
       navigation.goBack();

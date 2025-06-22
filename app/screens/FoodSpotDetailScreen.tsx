@@ -47,7 +47,8 @@ import {
   removeFavourite, 
   getFavourites,
   toggleReviewLike,
-  deleteImage
+  deleteImage,
+  viewAllImages
 } from '../../services/ApiClient';
 
 // Types and styles
@@ -87,6 +88,19 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     initialData: initialFoodSpot,
+  });
+
+  // Dedicated React Query for spot images to allow for separate caching and invalidation
+  const { 
+    data: spotImages,
+  } = useQuery<(string | { url: string })[]>({
+    queryKey: ['spotImages', id],
+    queryFn: async () => {
+      const response = await getFoodSpot(id);
+      const spotData = response.data?.data || response.data;
+      return spotData?.images || [];
+    },
+    // No staleTime, so it defaults to 0 and is always considered stale.
   });
 
   // React Query for reviews
@@ -352,39 +366,53 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     }
     try {
       // Optimistic update for the item in the current sort order
-      queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
-        return oldData?.map(review => {
-          if (review.id === reviewId) {
-            return {
-              ...review,
-              is_liked: !review.is_liked,
-              likes_count: review.is_liked ? (review.likes_count || 1) - 1 : (review.likes_count || 0) + 1,
-            };
-          }
-          return review;
-        });
-      });
+      queryClient.setQueryData<{ reviews: Review[]; total: number } | undefined>(
+        ['foodSpotReviews', id, sortOrder], 
+        (oldData) => {
+          if (!oldData) return undefined;
+          return {
+            ...oldData,
+            reviews: oldData.reviews.map(review => {
+              if (review.id === reviewId) {
+                return {
+                  ...review,
+                  is_liked: !review.is_liked,
+                  likes_count: review.is_liked ? (review.likes_count || 1) - 1 : (review.likes_count || 0) + 1,
+                };
+              }
+              return review;
+            }),
+          };
+        }
+      );
 
       const response = await toggleReviewLike(reviewId);
       const updatedReviewData = response.data?.review; 
 
       // After the API call, update the cache with the authoritative data from the server for the current sort order
-      queryClient.setQueryData<Review[]>(['foodSpotReviews', id, sortOrder], (oldData) => {
-        return oldData?.map(review => {
-          if (review.id === reviewId) {
-            if (updatedReviewData) {
-              return {
-                ...review,
-                ...updatedReviewData, 
-                is_liked: updatedReviewData.is_liked ?? review.is_liked, // Fallback to optimistic
-                likes_count: updatedReviewData.likes_count ?? review.likes_count // Fallback to optimistic
-              };
-            }
-            return review; 
-          }
-          return review;
-        });
-      });
+      queryClient.setQueryData<{ reviews: Review[]; total: number } | undefined>(
+        ['foodSpotReviews', id, sortOrder], 
+        (oldData) => {
+          if (!oldData) return undefined;
+          return {
+            ...oldData,
+            reviews: oldData.reviews.map(review => {
+              if (review.id === reviewId) {
+                if (updatedReviewData) {
+                  return {
+                    ...review,
+                    ...updatedReviewData, 
+                    is_liked: updatedReviewData.is_liked ?? review.is_liked, // Fallback to optimistic
+                    likes_count: updatedReviewData.likes_count ?? review.likes_count // Fallback to optimistic
+                  };
+                }
+                return review; 
+              }
+              return review;
+            }),
+          };
+        }
+      );
 
       // Invalidate both sort orders to ensure fresh data and correct sorting for both.
       // This is simpler and more robust than trying to conditionally update/invalidate only one.
@@ -465,8 +493,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
             showFavourite={true}
           />
 
-          {foodSpot.images && foodSpot.images.length > 0 && (
-            <ImageCarousel images={foodSpot.images} title="Spot Photos" />
+          {spotImages && spotImages.length > 0 && (
+            <ImageCarousel images={spotImages} title="Spot Photos" />
           )}
 
           <View style={styles.mainContent}>

@@ -21,11 +21,9 @@ import {
   FoodSpotHeader, 
   FoodSpotDetailsSection, 
   FoodSpotAboutSection, 
-  FoodSpotBusinessHoursSection, 
   FoodSpotSocialLinksSection,
-  BusinessHourIndicator 
 } from '../components/FoodSpot';
-import { ImageCarousel } from '../components/UI';
+import { ImageCarousel, BusinessHours } from '../components/UI';
 
 // Hooks and utilities
 import { useEffect } from 'react';
@@ -508,20 +506,22 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
               />
             </View>
 
+            {formattedHours && formattedHours.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Business Hours</Text>
+                  <Text style={{ color: isOpen ? colors.success : colors.error, fontWeight: 'bold', fontSize: 16 }}>
+                    {isOpen ? 'Open' : 'Closed'}
+                  </Text>
+                </View>
+                <BusinessHours isOpen={isOpen} hours={formattedHours} showStatus={false} />
+              </View>
+            )}
+
             {foodSpot.description && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>About</Text>
                 <FoodSpotAboutSection about={foodSpot.description} />
-              </View>
-            )}
-
-            {formattedHours.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={[styles.sectionTitle, styles.sectionTitleWithIndicator]}>Business Hours</Text>
-                  <BusinessHourIndicator isOpen={isOpen} />
-                </View>
-                <FoodSpotBusinessHoursSection business_hours={formattedHours} />
               </View>
             )}
 

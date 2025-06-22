@@ -9,6 +9,7 @@ export default {
   darkGray: '#757575', // For secondary text
   black: '#212121', // For primary text
   error: '#D32F2F', // For error messages
+  success: '#4CAF50', // For success indicators (e.g., "Open")
 
   // New warm accent colors
   warmAccent1: '#FFA726', // Orange

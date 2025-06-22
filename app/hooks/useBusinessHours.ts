@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-interface BusinessHoursFormat {
+export interface BusinessHoursFormat {
   day: string;
   hours: string;
 }

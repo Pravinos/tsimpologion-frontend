@@ -34,6 +34,10 @@ export interface FoodSpot {
   price_range?: string; // Added
   distance?: number; // Added
   phone?: string; // Added
+  user_id?: number; // Added
+  average_rating?: string; // Added
+  reviews_count?: number; // Added
+  user?: User;
 }
 
 /**

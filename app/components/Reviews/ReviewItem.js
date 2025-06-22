@@ -66,7 +66,7 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
               </Text>
             </View>
           )}
-          <View>
+          <View style={styles.userInfoText}>
             <Text style={styles.username}>{userName}</Text>
             {formattedDate && (
               <Text style={styles.date}>{formattedDate}</Text>
@@ -109,7 +109,7 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.backgroundWarm, // Use warm background
-    padding: 16, // Increased padding
+    padding: 12, // Increased padding
     borderRadius: 12, // Increased border radius
     marginBottom: 12, // Adjusted margin
     shadowColor: colors.black,
@@ -121,12 +121,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Align items to the top for better alignment of icon and stars
     marginBottom: 8,
   },
   userInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Align icon and text to the top
+    flex: 1, // Allow user info to take available space
+    marginRight: 10, // Add space between name and stars
   },
   userImage: {
     width: 30,
@@ -142,6 +144,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10, // Adjusted margin
+  },
+  userInfoText: { // New style for the text container
+    flex: 1, // Allow text container to shrink
   },
   initialText: {
     color: colors.white,

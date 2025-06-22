@@ -12,6 +12,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
+import EditFoodSpotScreen from '../screens/EditFoodSpotScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
 import { useAuth } from '../../services/AuthProvider';
@@ -105,6 +106,21 @@ function MainStack() {
         }} 
       />
       
+      {/* EditFoodSpot screen */}
+      <Stack.Screen 
+        name="EditFoodSpot" 
+        component={EditFoodSpotScreen} 
+        options={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          contentStyle: {
+            backgroundColor: colors.white,
+          }
+        }} 
+      />
+
       {/* Add other screens here with similar options */}
     </Stack.Navigator>
   );

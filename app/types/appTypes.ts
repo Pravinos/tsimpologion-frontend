@@ -5,8 +5,16 @@ export interface FoodSpot {
   name: string;
   category: string;
   city: string;
+  address: string;
+  description: string;
+  info_link: string;
+  phone?: string;
+  business_hours?: any;
+  social_links?: any;
   rating?: number;
   price_range?: string; // Added price_range property
+  owner_id?: number;
+  user_id?: number; // Added user_id property
   images?: {
     id: number;
     url: string;
@@ -28,9 +36,10 @@ export interface User {
 
 export type RootStackParamList = {
   Home: undefined;
-  FoodSpotDetail: { id: number; name: string };
+  FoodSpotDetail: { foodSpot: FoodSpot };
   Profile: undefined;
   EditProfile: undefined;
+  EditFoodSpot: { foodSpotId: number };
   Login: undefined;
   Register: undefined;
   Auth: undefined;

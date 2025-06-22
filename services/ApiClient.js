@@ -1,12 +1,3 @@
-// --- Favourites ---
-// Get all favourites for the logged-in user
-export const getFavourites = () => get('/favourites');
-
-// Add a food spot to favourites
-export const addFavourite = (foodSpotId) => post(`/food-spots/${foodSpotId}/favourite`);
-
-// Remove a food spot from favourites
-export const removeFavourite = (foodSpotId) => del(`/food-spots/${foodSpotId}/favourite`);
 // First ensure these imports are at the top
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -142,6 +133,16 @@ export const deleteUser = (id) => {
   return del(`/users/${id}`);
 };
 
+// --- Favourites ---
+// Get all favourites for the logged-in user
+export const getFavourites = () => get('/favourites');
+
+// Add a food spot to favourites
+export const addFavourite = (foodSpotId) => post(`/food-spots/${foodSpotId}/favourite`);
+
+// Remove a food spot from favourites
+export const removeFavourite = (foodSpotId) => del(`/food-spots/${foodSpotId}/favourite`);
+
 // --- Food Spots ---
 export const getFoodSpots = (params) => 
   get('/food-spots', params);
@@ -205,14 +206,18 @@ export const getUserReviews = (userId) => {
   return get(`/users/${userId}/reviews`);
 };
 
+export const getUserFoodSpots = (userId) => {
+  return get(`/users/${userId}/food-spots`);
+};
+
 // --- Images ---
 // For React Native, must set correct headers for FormData
 export const uploadImage = (modelType, id, formData) => {
-  // Do NOT set Content-Type header manually for FormData in React Native
+  // We must override the default 'application/json' for file uploads
   return apiClient.post(`/images/${modelType}/${id}`, formData, {
     headers: {
       'Accept': 'application/json',
-      // Let axios/fetch set Content-Type for FormData
+      'Content-Type': 'multipart/form-data',
     },
   });
 };

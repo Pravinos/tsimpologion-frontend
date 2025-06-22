@@ -7,9 +7,10 @@ import {
   StyleSheet, 
   ActivityIndicator,
   Image,
-  Alert
+  Alert,
+  ScrollView
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
@@ -18,7 +19,7 @@ interface ReviewFormProps {
   isLoggedIn: boolean;
   isSubmitting: boolean;
   imageUploading: boolean;
-  onSubmit: (rating: number, comment: string, image: ImagePicker.ImagePickerAsset | null) => Promise<void>;
+  onSubmit: (rating: number, comment: string, images: ImagePicker.ImagePickerAsset[]) => Promise<void>;
   onNavigateToLogin: () => void;
 }
 
@@ -31,7 +32,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -47,11 +48,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
     });
     
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setSelectedImage(result.assets[0] as ImagePicker.ImagePickerAsset);
+      setSelectedImages(prev => [...prev, result.assets[0] as ImagePicker.ImagePickerAsset]);
     }
   };
   
-  const handleRemoveImage = () => setSelectedImage(null);
+  const handleRemoveImage = (uri: string) => {
+    setSelectedImages(prev => prev.filter(image => image.uri !== uri));
+  };
   
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -64,12 +67,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       return;
     }
     
-    await onSubmit(rating, comment, selectedImage);
+    await onSubmit(rating, comment, selectedImages);
     
     // Reset form after successful submission
     setRating(0);
     setComment('');
-    setSelectedImage(null);
+    setSelectedImages([]);
   };
   
   if (!isLoggedIn) {
@@ -91,7 +94,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   return (
     <>
       <View style={styles.ratingSelector}>
-        <Text style={styles.ratingLabel}>Rating:</Text>
+        <Text style={styles.ratingLabel}>Your Rating:</Text>
         <StarRating 
           rating={rating} 
           size={24} 
@@ -110,47 +113,45 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       />
       
       {/* Image Picker */}
-      <View style={styles.imagePickerContainer}>
-        {selectedImage ? (
-          <View style={styles.selectedImageContainer}>
-            <Image
-              source={{ uri: selectedImage.uri }}
-              style={styles.selectedImage}
-            />
-            <TouchableOpacity 
-              onPress={handleRemoveImage} 
-              style={styles.removeImageButton}
-            >
-              <Text style={styles.removeImageText}>Remove Photo</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity 
-            onPress={handlePickImage} 
-            style={styles.addPhotoButton}
-          >
-            <Feather name="camera" size={20} color={colors.primary} />
-            <Text style={styles.addPhotoText}>Add a photo</Text>
+      <View style={styles.photoSection}>
+        <Text style={styles.photoSectionTitle}>Add Photos</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScrollView}>
+          {selectedImages.map((image, index) => (
+            <View key={`new-${index}`} style={styles.imageContainer}>
+              <Image
+                source={{ uri: image.uri }}
+                style={styles.reviewImage}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                onPress={() => handleRemoveImage(image.uri)}
+                style={styles.removeImageButton}
+              >
+                <MaterialCommunityIcons name="close" size={18} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity onPress={handlePickImage} style={styles.addPhotoButton}>
+            <MaterialCommunityIcons name="camera-plus-outline" size={30} color={colors.primary} />
           </TouchableOpacity>
-        )}
-        
+        </ScrollView>
         {imageUploading && (
           <View style={styles.uploadingContainer}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.uploadingText}>Uploading image...</Text>
+            <Text style={styles.uploadingText}>Uploading image(s)...</Text>
           </View>
         )}
       </View>
       
       <TouchableOpacity 
-        style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+        style={[styles.submitButton, (isSubmitting || imageUploading) && styles.submitButtonDisabled]}
         onPress={handleSubmit}
         disabled={isSubmitting || imageUploading}
       >
         {isSubmitting ? (
           <ActivityIndicator size="small" color={colors.white} />
         ) : (
-          <Text style={styles.submitButtonText}>SUBMIT</Text>
+          <Text style={styles.submitButtonText}>SUBMIT REVIEW</Text>
         )}
       </TouchableOpacity>
     </>
@@ -165,57 +166,76 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontSize: 16,
+    fontWeight: 'bold',
     marginRight: 10,
+    color: colors.darkGray,
   },
   reviewInput: {
-    height: 100,
+    minHeight: 100,
     borderWidth: 1,
     borderColor: colors.mediumGray,
     borderRadius: 8,
-    padding: 10,
+    padding: 12,
     marginBottom: 15,
     textAlignVertical: 'top',
+    backgroundColor: colors.white,
+    fontSize: 14,
   },
-  imagePickerContainer: {
-    marginBottom: 15,
+  photoSection: {
+    marginBottom: 20,
   },
-  selectedImageContainer: {
-    alignItems: 'center',
+  photoSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.darkGray,
+    marginBottom: 10,
   },
-  selectedImage: {
-    width: 120,
-    height: 120,
+  imageScrollView: {
+    paddingVertical: 8,
+  },
+  imageContainer: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  reviewImage: {
+    width: 100,
+    height: 100,
     borderRadius: 10,
-    marginBottom: 8,
+    backgroundColor: colors.lightGray,
   },
   removeImageButton: {
-    marginBottom: 8,
-  },
-  removeImageText: {
-    color: colors.error,
-    fontWeight: 'bold',
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    padding: 2,
   },
   addPhotoButton: {
-    backgroundColor: colors.lightGray,
-    padding: 10,
-    borderRadius: 8,
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  addPhotoText: {
-    color: colors.primary,
-    marginTop: 4,
+    backgroundColor: colors.lightGray,
   },
   uploadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    marginTop: 10,
   },
   uploadingText: {
     marginLeft: 8,
+    color: colors.darkGray,
+    fontStyle: 'italic',
   },
   submitButton: {
     backgroundColor: colors.primary,
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -229,20 +249,20 @@ const styles = StyleSheet.create({
   },
   loginPrompt: {
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: colors.lightGray,
+    padding: 20,
+    backgroundColor: colors.backgroundWarm,
     borderRadius: 8,
   },
   loginPromptText: {
     fontSize: 14,
     color: colors.darkGray,
-    marginBottom: 10,
+    marginBottom: 12,
     textAlign: 'center',
   },
   loginButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
     borderRadius: 8,
   },
   loginButtonText: {

@@ -84,9 +84,6 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
       {otherReviews.length > 0 || userReview ? ( // Show this section if there are other reviews OR if there's a user review (to show sort options)
         <View style={styles.otherReviewsSection}>
           <View style={styles.otherReviewsHeader}>
-            <Text style={styles.otherReviewsTitle}>
-              {userReview ? 'Other Reviews' : 'Reviews'}
-            </Text>
             <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
           </View>
 
@@ -118,7 +115,7 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
               horizontal
               showsHorizontalScrollIndicator={false}
               initialNumToRender={3}
-              contentContainerStyle={{ paddingVertical: 4 }}
+              contentContainerStyle={{ paddingVertical: 4, paddingHorizontal: 20 }}
             />
           ) : (
             <Text style={styles.noReviewsText}>
@@ -178,6 +175,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start', // Changed from flex-end to flex-start
     alignItems: 'center', 
     marginBottom: 12, 
+
   },
   sortByText: { // Added style for Sort by text
     fontSize: 14,
@@ -214,6 +212,7 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
     marginTop: 10,
     marginBottom: 10,
+    paddingHorizontal: 20,
   },
   errorContainer: {
     padding: 20,

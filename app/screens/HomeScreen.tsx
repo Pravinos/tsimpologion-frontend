@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Hooks and services
 import { useAuth } from '../../services/AuthProvider';
-import { getFoodSpots, getFavourites } from '../../services/ApiClient';
+import { getFoodSpots, getFavourites, getUserFoodSpots } from '../../services/ApiClient';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
@@ -32,17 +32,23 @@ const SORT_OPTIONS = [
   { label: 'Lowest First', value: 'asc' },
 ];
 
-const LIST_OPTIONS = [
-  { label: 'Popular', value: 'popular' },
-  { label: 'Favourites', value: 'favourites' },
-];
-
-type ListType = 'popular' | 'favourites';
+type ListType = 'popular' | 'favourites' | 'mySpots';
 
 const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
+  const LIST_OPTIONS = useMemo(() => {
+    const options = [
+      { label: 'Popular', value: 'popular' as ListType },
+      { label: 'Favourites', value: 'favourites' as ListType },
+    ];
+    if (user?.role === 'spot_owner') {
+      options.push({ label: 'My Spots', value: 'mySpots' as ListType });
+    }
+    return options;
+  }, [user]);
+
   // UI state
   const [listType, setListType] = useState<ListType>('popular');
   const [searchText, setSearchText] = useState('');
@@ -63,7 +69,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     queryKey: ['foodSpots'],
     queryFn: async () => {
       const response = await getFoodSpots();
-      return response.data.data || response.data;
+      // Safely access data and provide a fallback empty array
+      return response.data?.data || response.data || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'popular',
@@ -80,18 +87,58 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     queryKey: ['favourites'],
     queryFn: async () => {
       const response = await getFavourites();
-      return response.data.data || response.data;
+      // Safely access data and provide a fallback empty array
+      return response.data?.data || response.data || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'favourites',
   });
 
+  // Query for user's food spots
+  const {
+    data: mySpots = [],
+    isLoading: loadingMySpots,
+    isError: isMySpotsError,
+    refetch: refetchMySpots,
+    isFetching: isFetchingMySpots,
+  } = useQuery<FoodSpot[], Error>({
+    queryKey: ['mySpots', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const response = await getUserFoodSpots(user.id);
+      // Safely access data and provide a fallback empty array
+      return response.data?.data || response.data || [];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: listType === 'mySpots' && !!user?.id,
+  });
+
   // Helper values for current list state
-  const currentData = listType === 'favourites' ? favouriteSpots : foodSpots;
-  const isLoading = listType === 'favourites' ? loadingFavourites : loadingFoodSpots;
-  const isError = listType === 'favourites' ? isFavouritesError : isFoodSpotsError;
-  const isFetching = listType === 'favourites' ? isFetchingFavourites : isFetchingFoodSpots;
-  const refetch = listType === 'favourites' ? refetchFavourites : refetchFoodSpots;
+  const currentData = listType === 'favourites' 
+    ? favouriteSpots 
+    : listType === 'mySpots'
+        ? mySpots
+        : foodSpots;
+  const isLoading = listType === 'favourites' 
+    ? loadingFavourites 
+    : listType === 'mySpots'
+        ? loadingMySpots
+        : loadingFoodSpots;
+  const isError = listType === 'favourites' 
+    ? isFavouritesError 
+    : listType === 'mySpots'
+        ? isMySpotsError
+        : isFoodSpotsError;
+  const isFetching = listType === 'favourites' 
+    ? isFetchingFavourites 
+    : listType === 'mySpots'
+        ? isFetchingMySpots
+        : isFetchingFoodSpots;
+  const refetch = listType === 'favourites' 
+    ? refetchFavourites 
+    : listType === 'mySpots'
+        ? refetchMySpots
+        : refetchFoodSpots;
 
   // Dynamically extract unique categories from the current list
   const categories = useMemo(() => {
@@ -138,13 +185,15 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const handleRefresh = useCallback(() => {
     if (listType === 'favourites') {
       queryClient.invalidateQueries({ queryKey: ['favourites'] });
+    } else if (listType === 'mySpots') {
+      queryClient.invalidateQueries({ queryKey: ['mySpots', user?.id] });
     } else {
       queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
     }
-  }, [queryClient, listType]);
+  }, [queryClient, listType, user?.id]);
 
   const navigateToDetail = useCallback((item: FoodSpot) => {
-    navigation.navigate('FoodSpotDetail', { id: item.id, name: item.name });
+    navigation.navigate('FoodSpotDetail', { foodSpot: item });
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: { item: FoodSpot }) => (
@@ -226,7 +275,6 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             onRefresh={handleRefresh}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No results found</Text>
               </View>
             }
           />

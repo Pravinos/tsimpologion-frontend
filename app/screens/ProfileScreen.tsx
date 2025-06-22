@@ -189,21 +189,6 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
                 </Text>
               </View>
             </View>
-            {userProfile?.role === 'spot_owner' && (
-              <View style={styles.infoItem}>
-                <Feather name="home" size={20} color={colors.primary} style={styles.infoIcon} />
-                <View>
-                  <Text style={styles.infoLabel}>Businesses</Text>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('MySpots')}
-                  >
-                    <Text style={[styles.infoValue, styles.linkText]}>
-                      View my businesses
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
           </View>
           <View style={styles.actionsSectionCard}>
             <TouchableOpacity 
@@ -214,16 +199,6 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
               <Feather name="edit-2" size={20} color={colors.primary} style={styles.actionIcon} />
               <Text style={styles.actionText}>Edit Profile</Text>
             </TouchableOpacity>
-            {userProfile?.role === 'spot_owner' && (
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('AddFoodSpot')}
-                activeOpacity={0.85}
-              >
-                <Feather name="plus-circle" size={20} color={colors.primary} style={styles.actionIcon} />
-                <Text style={styles.actionText}>Add Business</Text>
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
               style={[styles.actionButton, styles.logoutButton]}
               onPress={handleLogout}

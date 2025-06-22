@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     borderBottomColor: colors.lightGray,
+    width: '100%',
   },
   iconBackground: {
     width: 60,
@@ -83,6 +84,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
+    // Shadow properties copied from FoodSpotItem for consistency
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2, 
   },
   name: {
     fontSize: 24,

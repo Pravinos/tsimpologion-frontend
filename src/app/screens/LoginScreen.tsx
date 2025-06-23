@@ -1,109 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useReducer } from 'react';
 import {
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   View,
   Image,
   Text,
-  TextInput,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import colors from '../styles/colors';
+import colors from '@/app/styles/colors';
 import { useAuth } from '@/services/AuthProvider';
+import AuthInput from '@/app/components/UI/AuthInput';
 
 interface LoginScreenProps {
   navigation: any;
 }
 
-interface AuthInputProps {
-  icon: string;
-  placeholder: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  secureTextEntry?: boolean;
-  showToggle?: boolean;
-  onToggle?: () => void;
-  showValue?: boolean;
-  editable?: boolean;
+// Form state and actions for the reducer
+interface FormState {
+  values: {
+    email: string;
+    password: string;
+  };
+  errors: {
+    email?: string;
+    password?: string;
+  };
 }
 
-const AuthInput: React.FC<AuthInputProps> = ({
-  icon,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry = false,
-  showToggle = false,
-  onToggle,
-  showValue = false,
-  editable = true,
-}) => {
-  const [isFocused, setIsFocused] = useState(false);
-  return (
-    <View
-      style={[
-        styles.inputContainer,
-        isFocused && styles.inputContainerFocused,
-        !editable && styles.inputContainerDisabled,
-      ]}
-    >
-      <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
-      <TextInput
-        style={[styles.input, { color: '#000' }]}
-        placeholder={placeholder}
-        placeholderTextColor={colors.darkGray}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry && !showValue}
-        autoCapitalize="none"
-        editable={editable}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-      />
-      {showToggle && onToggle && (
-        <TouchableOpacity
-          onPress={onToggle}
-          style={styles.eyeIcon}
-          disabled={!editable}
-        >
-          <Feather
-            name={showValue ? 'eye-off' : 'eye'}
-            size={20}
-            color={colors.darkGray}
-          />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+type FormAction =
+  | { type: 'UPDATE_FIELD'; field: keyof FormState['values']; value: string }
+  | { type: 'SET_ERRORS'; errors: FormState['errors'] }
+  | { type: 'CLEAR_ERRORS' };
+
+const initialState: FormState = {
+  values: {
+    email: '',
+    password: '',
+  },
+  errors: {},
+};
+
+const formReducer = (state: FormState, action: FormAction): FormState => {
+  switch (action.type) {
+    case 'UPDATE_FIELD':
+      return {
+        ...state,
+        values: { ...state.values, [action.field]: action.value },
+        errors: { ...state.errors, [action.field]: undefined }, // Clear error on change
+      };
+    case 'SET_ERRORS':
+      return { ...state, errors: action.errors };
+    case 'CLEAR_ERRORS':
+      return { ...state, errors: {} };
+    default:
+      return state;
+  }
 };
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formState, dispatch] = useReducer(formReducer, initialState);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const { login } = useAuth();
 
+  const handleInputChange = (field: keyof FormState['values'], value: string) => {
+    dispatch({ type: 'UPDATE_FIELD', field, value });
+  };
+
+  const validateForm = (): boolean => {
+    const { email, password } = formState.values;
+    const newErrors: FormState['errors'] = {};
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email address is invalid';
+    }
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+
+    dispatch({ type: 'SET_ERRORS', errors: newErrors });
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter your email and password.');
+    setApiError(null);
+    if (!validateForm()) {
       return;
     }
     setIsLoading(true);
-    setError(null);
     try {
-      await login({ email, password });
+      await login(formState.values);
+      // On successful login, the AuthProvider and AppNavigator will handle navigation
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || 'Login failed. Please check your credentials.';
-      setError(errorMessage);
-      Alert.alert('Login Error', errorMessage);
+      setApiError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +116,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.logoContainer}>
             <Image
-              source={require('../../assets/images/tsimpologo.png')}
+              source={require('@/assets/images/tsimpologo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
@@ -127,29 +125,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
           <View style={styles.formContainer}>
             <Text style={styles.title}>Welcome!</Text>
-            {error && (
+            {apiError && (
               <View style={styles.errorBox}>
                 <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{apiError}</Text>
               </View>
             )}
             <AuthInput
               icon="mail"
               placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
+              value={formState.values.email}
+              onChangeText={(value) => handleInputChange('email', value)}
               editable={!isLoading}
+              error={formState.errors.email}
             />
             <AuthInput
               icon="lock"
               placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
+              value={formState.values.password}
+              onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry
               showToggle
               onToggle={() => setShowPassword((v) => !v)}
               showValue={showPassword}
               editable={!isLoading}
+              error={formState.errors.password}
             />
             <TouchableOpacity
               style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -219,44 +219,6 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 20,
     textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.mediumGray,
-    borderRadius: 12,
-    marginBottom: 18,
-    paddingHorizontal: 14,
-    height: 52,
-    backgroundColor: colors.lightGray,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  inputContainerFocused: {
-    borderColor: colors.primary,
-    backgroundColor: '#fff',
-    shadowOpacity: 0.12,
-    elevation: 2,
-  },
-  inputContainerDisabled: {
-    opacity: 0.7,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: 'transparent',
-  },
-  eyeIcon: {
-    padding: 5,
   },
   button: {
     backgroundColor: colors.primary,

@@ -134,7 +134,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       quality: 1,
     });

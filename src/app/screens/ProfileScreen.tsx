@@ -11,80 +11,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+
 import colors from '../styles/colors';
 import { useAuth } from '@/services/AuthProvider';
-import { getCurrentUser, getUserReviews } from '@/services/ApiClient';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useUserProfile } from '@/app/hooks/useUserProfile';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
-
-const API_BASE_URL = 'http://192.168.1.162:8000';
 
 const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, logout } = useAuth();
   const queryClient = useQueryClient();
-
-  // React Query for user profile
-  const {
-    data: userProfile,
-    isLoading: loading,
-    isError: isProfileError,
-    error: profileError,
-    refetch: refetchProfile,
-  } = useQuery({
-    queryKey: ['userProfile', token],
-    queryFn: async () => {
-      try {
-        const response = await getCurrentUser();
-        return response.data?.data || response.data;
-      } catch (err) {
-        const error = err as any;
-        // Only log error if not 401 (Unauthenticated)
-        if (error.response?.status !== 401) {
-          console.error('Profile query error:', error.response ? error.response.data : error);
-        }
-        throw err;
-      }
-    },
-    enabled: !!token,
-    staleTime: 1000 * 60 * 5,
-    retry: false, // Do not retry on error for debugging
-  });
-
-  // React Query for user reviews
-  const {
-    data: userReviews = [],
-    isLoading: reviewsLoading,
-    isError: isReviewsError,
-    refetch: refetchReviews,
-  } = useQuery({
-    queryKey: ['userReviews', userProfile?.id],
-    queryFn: async () => {
-      if (!userProfile?.id) return [];
-      const response = await getUserReviews(userProfile.id);
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        return response.data.data;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      } else {
-        return [];
-      }
-    },
-    enabled: !!userProfile?.id,
-    staleTime: 1000 * 60 * 2,
-  });
+  const { 
+    userProfile,
+    isProfileLoading,
+    isProfileError,
+    refetchProfile,
+    userReviews,
+    areReviewsLoading,
+  } = useUserProfile();
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'OK', onPress: async () => {
         await logout();
-        await queryClient.invalidateQueries({ queryKey: ['userProfile', token] });
-        await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
+        queryClient.invalidateQueries({ queryKey: ['userProfile', token] });
+        queryClient.invalidateQueries({ queryKey: ['userReviews'] });
       }}
     ]);
   };
 
-  if (loading) {
+  if (isProfileLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
@@ -184,7 +141,7 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
               <View>
                 <Text style={styles.infoLabel}>Reviews</Text>
                 <Text style={styles.infoValue}>
-                  {reviewsLoading ? 'Loading...' : displayReviewsCount}
+                  {areReviewsLoading ? 'Loading...' : displayReviewsCount}
                 </Text>
               </View>
             </View>

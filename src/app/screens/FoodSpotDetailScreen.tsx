@@ -50,8 +50,7 @@ import {
 } from '@/services/ApiClient';
 
 // Types and styles
-import { FoodSpot, Review, User } from '@/types/models';
-import { ScreenProps } from '@/app/types/appTypes';
+import { FoodSpot, Review, User, ScreenProps } from '@/app/types/appTypes';
 import colors from '@/app/styles/colors';
 
 // Type for the route parameters

@@ -230,7 +230,7 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsMultipleSelection: true,
       quality: 1,
     });

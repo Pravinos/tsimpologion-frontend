@@ -10,11 +10,10 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
-import { getFoodSpots, getFavourites, getUserFoodSpots } from '@/services/ApiClient';
+import { useFoodSpots } from '@/app/hooks/useFoodSpots';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
@@ -36,7 +35,6 @@ type ListType = 'popular' | 'favourites' | 'mySpots';
 
 const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   
   const LIST_OPTIONS = useMemo(() => {
     const options = [
@@ -58,87 +56,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>(''); // Added price sort state
 
-  // Query for food spots
-  const {
-    data: foodSpots = [],
-    isLoading: loadingFoodSpots,
-    isError: isFoodSpotsError,
-    refetch: refetchFoodSpots,
-    isFetching: isFetchingFoodSpots,
-  } = useQuery<FoodSpot[], Error>({
-    queryKey: ['foodSpots'],
-    queryFn: async () => {
-      const response = await getFoodSpots();
-      // Safely access data and provide a fallback empty array
-      return response.data?.data || response.data || [];
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: listType === 'popular',
-  });
-
-  // Query for favourites
-  const {
-    data: favouriteSpots = [],
-    isLoading: loadingFavourites,
-    isError: isFavouritesError,
-    refetch: refetchFavourites,
-    isFetching: isFetchingFavourites,
-  } = useQuery<FoodSpot[], Error>({
-    queryKey: ['favourites'],
-    queryFn: async () => {
-      const response = await getFavourites();
-      // Safely access data and provide a fallback empty array
-      return response.data?.data || response.data || [];
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: listType === 'favourites',
-  });
-
-  // Query for user's food spots
-  const {
-    data: mySpots = [],
-    isLoading: loadingMySpots,
-    isError: isMySpotsError,
-    refetch: refetchMySpots,
-    isFetching: isFetchingMySpots,
-  } = useQuery<FoodSpot[], Error>({
-    queryKey: ['mySpots', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const response = await getUserFoodSpots(user.id);
-      // Safely access data and provide a fallback empty array
-      return response.data?.data || response.data || [];
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: listType === 'mySpots' && !!user?.id,
-  });
-
-  // Helper values for current list state
-  const currentData = listType === 'favourites' 
-    ? favouriteSpots 
-    : listType === 'mySpots'
-        ? mySpots
-        : foodSpots;
-  const isLoading = listType === 'favourites' 
-    ? loadingFavourites 
-    : listType === 'mySpots'
-        ? loadingMySpots
-        : loadingFoodSpots;
-  const isError = listType === 'favourites' 
-    ? isFavouritesError 
-    : listType === 'mySpots'
-        ? isMySpotsError
-        : isFoodSpotsError;
-  const isFetching = listType === 'favourites' 
-    ? isFetchingFavourites 
-    : listType === 'mySpots'
-        ? isFetchingMySpots
-        : isFetchingFoodSpots;
-  const refetch = listType === 'favourites' 
-    ? refetchFavourites 
-    : listType === 'mySpots'
-        ? refetchMySpots
-        : refetchFoodSpots;
+  // Query for food spots using the custom hook
+  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots(listType);
 
   // Dynamically extract unique categories from the current list
   const categories = useMemo(() => {
@@ -183,14 +102,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]); // Added priceSortDirection to dependencies
 
   const handleRefresh = useCallback(() => {
-    if (listType === 'favourites') {
-      queryClient.invalidateQueries({ queryKey: ['favourites'] });
-    } else if (listType === 'mySpots') {
-      queryClient.invalidateQueries({ queryKey: ['mySpots', user?.id] });
-    } else {
-      queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
-    }
-  }, [queryClient, listType, user?.id]);
+    refetch();
+  }, [refetch]);
 
   const navigateToDetail = useCallback((item: FoodSpot) => {
     navigation.navigate('FoodSpotDetail', { foodSpot: item });

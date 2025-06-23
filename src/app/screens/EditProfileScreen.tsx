@@ -127,10 +127,10 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       return;
     }
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 1,
     });
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
       const asset = pickerResult.assets[0];

@@ -15,6 +15,9 @@ export interface FoodSpot {
   price_range?: string; // Added price_range property
   owner_id?: number;
   user_id?: number; // Added user_id property
+  reviews_count?: number;
+  average_rating?: string;
+  user?: User;
   images?: {
     id: number;
     url: string;
@@ -23,10 +26,27 @@ export interface FoodSpot {
   }[];
 }
 
+export interface Review {
+  id: number;
+  comment: string;
+  rating: number;
+  created_at: string;
+  user: User | string;
+  user_id?: number;
+  images?: {
+    id: number;
+    url: string;
+  }[];
+  likes_count?: number;
+  is_liked?: boolean;
+}
+
 export interface User {
   id: number;
   name?: string;
   email: string;
+  role?: 'foodie' | 'spot_owner' | 'admin';
+  created_at?: string;
   images?: {
     id: number;
     url: string;

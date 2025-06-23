@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react'; // Added useState, useRef
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
-import { getIconForCategory } from '../../utils/categoryIcons'; // Import the utility
+import { getIconForCategory } from '../../utils/categoryIcons';
 
-
-// Add favourite star icon (filled or outline) and onPress handler
 interface FoodSpotHeaderProps {
   name: string;
   rating?: number;
@@ -27,7 +26,7 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
 
     isFavouriteCoolingDownRef.current = true;
     setIsProcessingFavourite(true);
-    onToggleFavourite(); 
+    onToggleFavourite();
 
     setTimeout(() => {
       isFavouriteCoolingDownRef.current = false;
@@ -35,81 +34,114 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
     }, 2000);
   };
 
-  return (
-    <View style={styles.header}>
-      <View style={styles.iconBackground}>
-        <MaterialCommunityIcons name={iconName} size={30} color={colors.primary} />
-      </View>
-      <Text style={styles.name}>{name}</Text>
-      <View style={styles.ratingContainer}>
-        <StarRating rating={rating || 0} size={18} selectable={false} onRatingChange={() => {}} />
-        <Text style={styles.ratingText}>
-          {rating != null ? rating.toFixed(1) : 'No ratings yet'}
+  const headerContent = (
+    <>
+      
+      <View style={styles.headerContent}>
+        <View style={styles.iconBackground}>
+          <MaterialCommunityIcons name={iconName} size={32} color={colors.primary} />
+        </View>
+        <Text style={styles.name}>{name}</Text>
+        <View style={styles.ratingContainer}>
+          <StarRating rating={rating || 0} size={20} selectable={false} onRatingChange={() => {}} />
+          {rating != null && (
+            <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+          )}
+        </View>
+        <Text style={styles.category}>
+          {category} {price_range ? `· ${price_range}` : ''}
         </Text>
-        {showFavourite && (
-          <TouchableOpacity
-            style={{ marginLeft: 16, padding: 4, justifyContent: 'center', alignItems: 'center' }}
-            onPress={handleToggleFavourite} // Use the new handler
-            disabled={isProcessingFavourite} // Disable during cooldown
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <MaterialCommunityIcons
-              name={isFavourite ? 'heart' : 'heart-outline'}
-              color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? '#D32F2F' : colors.mediumGray)} // Dim color during cooldown
-              size={30}
-              style={{ opacity: isProcessingFavourite ? 0.6 : (isFavourite ? 1 : 0.6) }} // Adjust opacity during cooldown
-            />
-          </TouchableOpacity>
-        )}
       </View>
-      <Text style={styles.category}>
-        {category} {price_range ? `· ${price_range}` : ''}
-      </Text>
-    </View>
+      {showFavourite && (
+        <TouchableOpacity
+          style={styles.favouriteButton}
+          onPress={handleToggleFavourite}
+          disabled={isProcessingFavourite}
+        >
+          <MaterialCommunityIcons
+            name={isFavourite ? 'heart' : 'heart-outline'}
+            color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? colors.error : colors.white)}
+            size={30}
+          />
+        </TouchableOpacity>
+      )}
+    </>
+  );
+
+  return (
+    <LinearGradient
+      // A smoother gradient that transitions gently from primary blue to the screen background.
+      colors={[colors.primary, colors.lightGray]}
+      locations={[0, 0.75]}
+      style={styles.headerContainer}
+    >
+      {headerContent}
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
+  headerContainer: {
+    minHeight: 280,
+    justifyContent: 'flex-start',
+    // backgroundColor is now handled by LinearGradient
+  },
+  headerContent: {
     padding: 20,
+    paddingTop: 60,
     alignItems: 'center',
-    borderBottomColor: colors.lightGray,
-    width: '100%',
   },
   iconBackground: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.lightGray,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
-    // Shadow properties copied from FoodSpotItem for consistency
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2, 
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 6,
   },
   name: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   ratingText: {
     marginLeft: 8,
-    fontSize: 16,
-    color: colors.darkGray,
+    fontSize: 18,
+    color: colors.white,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
   },
   category: {
-    fontSize: 16,
-    color: colors.darkGray,
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  favouriteButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    padding: 8,
   },
 });
 

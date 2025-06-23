@@ -1,5 +1,5 @@
 // Shared utility for resolving image URLs
-import { API_BASE_ORIGIN } from '../../services/ApiClient';
+import { API_BASE_ORIGIN } from '@/services/ApiClient';
 export function getFullImageUrl(imageObj) {
   if (!imageObj) return undefined;
   if (Array.isArray(imageObj)) imageObj = imageObj[0];

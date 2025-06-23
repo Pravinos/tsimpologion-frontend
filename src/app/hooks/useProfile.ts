@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../services/AuthProvider';
-import { getCurrentUser, getUserReviews } from '../../services/ApiClient';
+import { useAuth } from '@/services/AuthProvider';
+import { getCurrentUser, getUserReviews } from '@/services/ApiClient';
 import { User, Review } from '../../types/models';
 
 interface UseProfileResult {

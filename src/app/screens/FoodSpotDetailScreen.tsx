@@ -16,22 +16,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Components
-import { ReviewsSection, ReviewForm } from '../components/Reviews';
+import { ReviewsSection, ReviewForm } from '@/app/components/Reviews';
 import { 
   FoodSpotHeader, 
   FoodSpotDetailsSection, 
   FoodSpotAboutSection, 
   FoodSpotSocialLinksSection,
-} from '../components/FoodSpot';
-import { ImageCarousel, BusinessHours } from '../components/UI';
+} from '@/app/components/FoodSpot';
+import { ImageCarousel, BusinessHours } from '@/app/components/UI';
 
 // Hooks and utilities
 import { useEffect } from 'react';
-import { useAuth } from '../../services/AuthProvider';
+import { useAuth } from '@/services/AuthProvider';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
-import { useBusinessHours } from '../hooks/useBusinessHours';
-import { parseSocialLinks } from '../utils/parseSocialLinks';
+import { getFullImageUrl } from '@/app/utils/getFullImageUrl';
+import { useBusinessHours } from '@/app/hooks/useBusinessHours';
+import { parseSocialLinks } from '@/app/utils/parseSocialLinks';
 
 // API services
 import { 
@@ -47,12 +47,12 @@ import {
   toggleReviewLike,
   deleteImage,
   viewAllImages
-} from '../../services/ApiClient';
+} from '@/services/ApiClient';
 
 // Types and styles
-import { FoodSpot, Review, User } from '../../types/models';
-import { ScreenProps } from '../types/appTypes';
-import colors from '../styles/colors';
+import { FoodSpot, Review, User } from '@/types/models';
+import { ScreenProps } from '@/app/types/appTypes';
+import colors from '@/app/styles/colors';
 
 // Type for the route parameters
 interface FoodSpotDetailParams {

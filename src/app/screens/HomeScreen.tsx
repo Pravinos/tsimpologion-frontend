@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Hooks and services
-import { useAuth } from '../../services/AuthProvider';
-import { getFoodSpots, getFavourites, getUserFoodSpots } from '../../services/ApiClient';
+import { useAuth } from '@/services/AuthProvider';
+import { getFoodSpots, getFavourites, getUserFoodSpots } from '@/services/ApiClient';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';

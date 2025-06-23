@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { getFoodSpot, updateFoodSpot, uploadImage, deleteImage } from '../../services/ApiClient';
+import { getFoodSpot, updateFoodSpot, uploadImage, deleteImage } from '@/services/ApiClient';
 import { FoodSpot } from '../types/appTypes';
 import colors from '../styles/colors';
 import { ScreenProps } from '../types/appTypes';

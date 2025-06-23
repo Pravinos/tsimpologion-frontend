@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
-import { useAuth } from '../../services/AuthProvider';
+import { useAuth } from '@/services/AuthProvider';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -162,7 +162,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           {/* ... Logo Container (optional or smaller) ... */}
            <View style={styles.logoContainer}>
              <Image
-               source={require('../assets/tsimpologo.png')}
+               source={require('../../assets/images/tsimpologo.png')}
                style={{ width: 80, height: 80 }} // Slightly smaller logo
                resizeMode="contain"
              />

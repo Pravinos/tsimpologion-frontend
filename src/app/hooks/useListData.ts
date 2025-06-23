@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getFoodSpots, getFavourites } from '../../services/ApiClient';
-import { FoodSpot } from '../types/appTypes';
+import { getFoodSpots, getFavourites } from '@/services/ApiClient';
+import { FoodSpot } from '@/app/types/appTypes';
 
 export type ListType = 'popular' | 'favourites';
 

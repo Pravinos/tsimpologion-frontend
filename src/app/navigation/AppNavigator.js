@@ -3,7 +3,6 @@ import { StyleSheet, Dimensions } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { Feather } from '@expo/vector-icons';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
@@ -15,7 +14,7 @@ import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
 import EditFoodSpotScreen from '../screens/EditFoodSpotScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
-import { useAuth } from '../../services/AuthProvider';
+import { useAuth } from '@/services/AuthProvider';
 import colors from '../styles/colors';
 
 const Stack = createNativeStackNavigator();

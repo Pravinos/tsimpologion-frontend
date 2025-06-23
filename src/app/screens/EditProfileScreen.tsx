@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { API_BASE_URL } from '../../services/ApiClient';
+import { API_BASE_URL } from '@/services/ApiClient';
 import {
   StyleSheet,
   View,
@@ -16,9 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
-import { useAuth } from '../../services/AuthProvider';
-import { updateUser, getCurrentUser, uploadImage, getToken, deleteImage } from '../../services/ApiClient';
-import { User } from '../../types/models';
+import { useAuth } from '@/services/AuthProvider';
+import { updateUser, getCurrentUser, getToken, deleteImage } from '@/services/ApiClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { getFullImageUrl } from '../utils/getFullImageUrl';

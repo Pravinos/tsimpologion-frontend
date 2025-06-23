@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
-import { useAuth } from '../../services/AuthProvider';
+import { useAuth } from '@/services/AuthProvider';
 
 interface LoginScreenProps {
   navigation: any;
@@ -118,7 +118,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/tsimpologo.png')}
+              source={require('../../assets/images/tsimpologo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />

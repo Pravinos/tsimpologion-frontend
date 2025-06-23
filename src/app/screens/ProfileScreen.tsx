@@ -94,9 +94,9 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const displayReviewsCount = userReviews.length || 0;
   const displayRole = userProfile?.role 
     ? userProfile.role === 'foodie' 
-      ? 'Food Explorer' 
+      ? 'Foodie' 
       : userProfile.role === 'spot_owner' 
-        ? 'Business Owner' 
+        ? 'Owner' 
         : 'Administrator'
     : 'Food Explorer';
 

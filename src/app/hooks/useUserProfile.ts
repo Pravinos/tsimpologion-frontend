@@ -65,3 +65,5 @@ export const useUserProfile = () => {
     refetchReviews,
   };
 };
+
+export default useUserProfile;

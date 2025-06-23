@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as apiClient from './ApiClient';
-import { User, LoginCredentials, RegisterData } from '../types/models';
+import { User, LoginCredentials, RegisterData } from '../app/types/appTypes';
 
 // Define the context types
 interface AuthContextType {
@@ -101,102 +101,93 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       console.error('Failed to clear auth data from storage:', e);
     }
   };
-
   const login = async (credentials: LoginCredentials) => {
     try {
+      // Clear any previous error state first
+      await clearAuthData();
+      
+      // Call the login API
       const response = await apiClient.login(credentials);
       
-      // Debug: Log the full response structure
-      console.log('Login response structure:', JSON.stringify(response, null, 2));
-      
-      // Try different possible response structures
-      let authToken, authUser;
-      
-      // Check direct response properties
-      if (response.token && response.user) {
-        authToken = response.token;
-        authUser = response.user;
-      }
-      // Check if wrapped in data property
-      else if (response.data?.token && response.data?.user) {
-        authToken = response.data.token;
-        authUser = response.data.user;
-      }
-      // Check if token is direct but user needs to be fetched
-      else if (response.token || response.data?.token) {
-        authToken = response.token || response.data.token;
-        
-        // Fetch user data separately
+      // Check if we got a token back
+      if (response && response.token) {
         try {
+          // Fetch the user data with the new token
           const userResponse = await apiClient.getCurrentUser();
-          authUser = userResponse.data?.data || userResponse.data;
-        } catch (userErr) {
-          console.error('Failed to fetch user after login:', userErr);
-          throw new Error('Login succeeded but failed to fetch user data');
+          const userData = userResponse.data?.data || userResponse.data;
+          
+          if (userData) {
+            // Store everything in state and localStorage
+            setUser(userData);
+            setToken(response.token);
+            await saveAuthData(response.token, userData);
+            return response; // Return the full response for the caller
+          } else {
+            throw new Error('No user data returned after login');
+          }
+        } catch (userError) {
+          console.error('Error fetching user after login:', userError);
+          await clearAuthData();
+          throw userError;
         }
+      } else {
+        throw new Error('No token returned from login');
       }
-      else {
-        throw new Error(`Invalid login response format. Response: ${JSON.stringify(response)}`);
+    } catch (error: any) {
+      // Only log unexpected errors
+      if (!error.response || (error.response.status !== 401 && error.response.status !== 422)) {
+        console.error('Login error:', error);
       }
       
-      if (authToken && authUser) {
-        // Update state
-        setToken(authToken);
-        setUser(authUser);
-        
-        // Save to storage
-        await saveAuthData(authToken, authUser);
-        
-        return { token: authToken, user: authUser };
-      } else {
-        throw new Error('Missing token or user data in response');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
+      // Make sure we clear any partial auth state
+      await clearAuthData();
+      
+      // Re-throw to let the UI handle the error
       throw error;
     }
   };
-
   const register = async (userData: RegisterData) => {
     try {
+      // Clear any previous auth state
+      await clearAuthData();
+      
+      // Call the register API
       const response = await apiClient.register(userData);
-      console.log('Registration response structure:', JSON.stringify(response, null, 2));
-
-      // Accept a successful registration message (no token/user) as valid
-      if (response.message && response.message.toLowerCase().includes('user registered')) {
-        // Registration succeeded, but no login. Just return a flag.
-        return { success: true, message: response.message };
-      }
-
-      // Try different possible response structures for auto-login
-      let authToken, authUser;
-      if (response.token && response.user) {
-        authToken = response.token;
-        authUser = response.user;
-      } else if (response.data?.token && response.data?.user) {
-        authToken = response.data.token;
-        authUser = response.data.user;
-      } else if (response.token || response.data?.token) {
-        authToken = response.token || response.data.token;
+      
+      // Check if we got a token back
+      if (response && response.token) {
         try {
+          // Fetch the user data with the new token
           const userResponse = await apiClient.getCurrentUser();
-          authUser = userResponse.data?.data || userResponse.data;
-        } catch (userErr) {
-          console.error('Failed to fetch user after registration:', userErr);
-          throw new Error('Registration succeeded but failed to fetch user data');
+          const newUserData = userResponse.data?.data || userResponse.data;
+          
+          if (newUserData) {
+            // Store everything in state and localStorage
+            setUser(newUserData);
+            setToken(response.token);
+            await saveAuthData(response.token, newUserData);
+            return response; // Return the full response for the caller
+          } else {
+            throw new Error('No user data returned after registration');
+          }
+        } catch (userError) {
+          console.error('Error fetching user after registration:', userError);
+          await clearAuthData();
+          throw userError;
         }
-      }
-
-      if (authToken && authUser) {
-        setToken(authToken);
-        setUser(authUser);
-        await saveAuthData(authToken, authUser);
-        return { token: authToken, user: authUser };
       } else {
-        throw new Error('Invalid registration response format. Response: ' + JSON.stringify(response));
+        throw new Error('No token returned from registration');
       }
-    } catch (error) {
-      console.error('Registration error:', error);
+    } catch (error: any) {
+      // Only log unexpected errors
+      if (!error.response || (error.response.status !== 401 && error.response.status !== 422)) {
+        console.error('Registration error:', error);
+      }
+      
+      // Make sure we clear any partial auth state
+      await clearAuthData();
+      
+      // Re-throw to let the UI handle the error
       throw error;
     }
   };

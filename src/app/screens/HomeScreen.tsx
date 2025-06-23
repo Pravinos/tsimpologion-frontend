@@ -131,16 +131,16 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>
-              Welcome{user && user.name ? ` ${user.name}` : ''}
+              {user && user.name ? `Hi ${user.name} 👋` : 'Hi 👋'}
             </Text>
-            <Text style={styles.title}>Tsimpologion</Text>
+            <Text style={styles.title}>Find the perfect spot</Text>
+            <Text style={styles.subtitle}>Explore authentic flavors near you</Text>
           </View>
           <TouchableOpacity
             style={styles.profileButton}
@@ -188,6 +188,19 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             onRefresh={handleRefresh}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
+                <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
+                <Text style={styles.emptyText}>
+                  {listType === 'favourites' 
+                    ? "You haven't saved any favorites yet" 
+                    : listType === 'mySpots' 
+                      ? "You haven't added any food spots yet"
+                      : "No food spots found"}
+                </Text>
+                <Text style={styles.emptySubText}>
+                  {listType === 'favourites' 
+                    ? "Browse popular spots and tap the heart icon to add them to your favorites"
+                    : listType === 'mySpots'}
+                </Text>
               </View>
             }
           />
@@ -229,12 +242,19 @@ const styles = StyleSheet.create({
   },
   welcome: {
     fontSize: 16,
-    color: colors.darkGray,
+    color: colors.primary,
+    fontWeight: '500',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.black,
+    marginTop: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.darkGray,
+    marginTop: 4,
   },
   profileButton: {
     width: 50,
@@ -277,8 +297,7 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
     marginBottom: 20,
-  },
-  retryButton: {
+  },  retryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -296,6 +315,10 @@ const styles = StyleSheet.create({
     marginTop: 50,
     paddingHorizontal: 20,
   },
+  emptyIcon: {
+    marginBottom: 20,
+    opacity: 0.8,
+  },
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -307,6 +330,7 @@ const styles = StyleSheet.create({
     color: colors.mediumGray,
     textAlign: 'center',
     marginTop: 8,
+    lineHeight: 20,
   },
   section: {
     backgroundColor: colors.white,

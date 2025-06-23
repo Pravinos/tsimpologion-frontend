@@ -1,5 +1,19 @@
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 
+// Auth related interfaces
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  role?: 'foodie' | 'spot_owner';
+}
+
 export interface FoodSpot {
   id: number;
   name: string;

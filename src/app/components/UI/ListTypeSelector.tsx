@@ -44,25 +44,35 @@ const ListTypeSelector: React.FC<ListTypeSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   optionButton: {
     backgroundColor: colors.white, 
-    paddingVertical: 8,
-    paddingHorizontal: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 12,
     borderWidth: 1, 
-    borderColor: colors.mediumGray, // Changed from colors.primary
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   optionButtonSelected: {
     backgroundColor: colors.primary,
-    borderColor: colors.mediumGray, // Changed from colors.primary
-    borderWidth: 1, 
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
   },
   optionButtonText: {
-    color: colors.primary,
-    fontWeight: 'bold',
+    color: colors.darkGray,
+    fontWeight: '600',
+    fontSize: 14,
   },
   optionButtonTextSelected: {
     color: colors.white,

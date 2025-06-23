@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getIconForCategory } from '../../utils/categoryIcons';
@@ -34,114 +33,121 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
     }, 2000);
   };
 
-  const headerContent = (
-    <>
-      
+  return (
+    <View style={styles.headerContainer}>
       <View style={styles.headerContent}>
-        <View style={styles.iconBackground}>
-          <MaterialCommunityIcons name={iconName} size={32} color={colors.primary} />
+        <View style={styles.iconRow}>
+          <View style={styles.iconBackground}>
+            <MaterialCommunityIcons name={iconName} size={32} color={colors.primary} />
+          </View>
+          {showFavourite && (
+            <TouchableOpacity
+              style={styles.favouriteButton}
+              onPress={handleToggleFavourite}
+              disabled={isProcessingFavourite}
+            >
+              <MaterialCommunityIcons
+                name={isFavourite ? 'heart' : 'heart-outline'}
+                color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? colors.error : colors.primary)}
+                size={30}
+              />
+            </TouchableOpacity>
+          )}
         </View>
         <Text style={styles.name}>{name}</Text>
-        <View style={styles.ratingContainer}>
+        <View style={styles.ratingRow}>
           <StarRating rating={rating || 0} size={20} selectable={false} onRatingChange={() => {}} />
           {rating != null && (
             <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
           )}
         </View>
-        <Text style={styles.category}>
-          {category} {price_range ? `· ${price_range}` : ''}
-        </Text>
+        <View style={styles.categoryRow}>
+          <Text style={styles.categoryText}>{category}</Text>
+          {price_range ? (
+            <View style={styles.priceContainer}>
+              <Text style={styles.priceRange}>{price_range}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
-      {showFavourite && (
-        <TouchableOpacity
-          style={styles.favouriteButton}
-          onPress={handleToggleFavourite}
-          disabled={isProcessingFavourite}
-        >
-          <MaterialCommunityIcons
-            name={isFavourite ? 'heart' : 'heart-outline'}
-            color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? colors.error : colors.white)}
-            size={30}
-          />
-        </TouchableOpacity>
-      )}
-    </>
-  );
-
-  return (
-    <LinearGradient
-      // A smoother gradient that transitions gently from primary blue to the screen background.
-      colors={[colors.primary, colors.lightGray]}
-      locations={[0, 0.75]}
-      style={styles.headerContainer}
-    >
-      {headerContent}
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   headerContainer: {
-    minHeight: 280,
-    justifyContent: 'flex-start',
-    // backgroundColor is now handled by LinearGradient
+    minHeight: 120,
+    marginBottom: 18,
   },
   headerContent: {
-    padding: 20,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: 32,
     alignItems: 'center',
   },
-  iconBackground: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  name: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.white,
-    textAlign: 'center',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  ratingContainer: {
+  iconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  iconBackground: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.mediumGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  name: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: colors.black,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   ratingText: {
     marginLeft: 8,
-    fontSize: 18,
-    color: colors.white,
+    fontSize: 16,
+    color: colors.primary,
     fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 3,
   },
-  category: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  categoryText: {
+    color: colors.darkGray,
     fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 15,
+    marginRight: 8,
+  },
+  priceContainer: {
+    backgroundColor: colors.mediumGray,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  priceRange: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
   },
   favouriteButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    padding: 8,
+   width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.mediumGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
 });
 

@@ -85,3 +85,6 @@ export const useFoodSpots = (listType: ListType) => {
     refetch: refetchFoodSpots,
   };
 };
+
+
+export default useFoodSpots;

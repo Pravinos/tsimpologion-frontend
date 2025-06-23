@@ -198,34 +198,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.mediumGray,
-    backgroundColor: colors.white,
-    minWidth: 60,
+    backgroundColor: colors.lightGray, // match priceContainer
+    paddingHorizontal: 12, // match priceContainer (6*2 for more touch area)
+    paddingVertical: 4, // match priceContainer (2*2 for more touch area)
+    borderRadius: 12, // more pill-like, similar to priceContainer
+    minWidth: 40,
     alignItems: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 0, // remove border for pill look
+    // Remove shadow for a flat look, or keep if you want elevation
   },
   optionButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
+    backgroundColor: colors.primary, // match selected priceRange color
   },
   optionButtonText: {
-    color: colors.darkGray,
-    fontWeight: '500',
+    color: colors.primary, // match priceRange text color
+    fontWeight: '600', // match priceRange fontWeight
     fontSize: 14,
   },
   optionButtonTextSelected: {
-    color: colors.white,
-    fontWeight: '600',
+    color: colors.white, // white text on primary background
   },
   modalButtons: {
     flexDirection: 'row',

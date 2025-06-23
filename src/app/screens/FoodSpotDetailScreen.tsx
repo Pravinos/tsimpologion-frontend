@@ -495,6 +495,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
           )}
 
           <View style={styles.mainContent}>
+            {/* Modern Details Card */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Details</Text>
               <FoodSpotDetailsSection 
@@ -503,19 +504,17 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                 website={foodSpot.info_link}
                 distance={null}
               />
-            </View>
-
-            {formattedHours && formattedHours.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Business Hours</Text>
-                  <Text style={{ color: isOpen ? colors.success : colors.error, fontWeight: 'bold', fontSize: 16 }}>
-                    {isOpen ? 'Open' : 'Closed'}
-                  </Text>
+              {/* Business Hours below location, integrated, old approach */}
+              {formattedHours && formattedHours.length > 0 && (
+                <View>
+                  <BusinessHours
+                    hours={formattedHours}
+                    isOpen={isOpen}
+                    showStatus={true}
+                  />
                 </View>
-                <BusinessHours isOpen={isOpen} hours={formattedHours} showStatus={false} />
-              </View>
-            )}
+              )}
+            </View>
 
             {foodSpot.description && (
               <View style={styles.section}>
@@ -681,6 +680,38 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  businessHoursRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  businessHourPill: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 6,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  businessHourPillOpen: {
+    backgroundColor: colors.primary,
+  },
+  businessHourPillClosed: {
+    backgroundColor: colors.error,
+  },
+  businessHourPillText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  businessHourPillOpenText: {
+    color: colors.white,
+  },
+  businessHourPillClosedText: {
+    color: colors.white,
   },
 });
 

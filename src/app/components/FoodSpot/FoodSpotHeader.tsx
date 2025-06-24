@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getIconForCategory } from '../../utils/categoryIcons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface FoodSpotHeaderProps {
   name: string;
@@ -35,7 +36,10 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
 
   return (
     <View style={styles.headerContainer}>
-      <View style={styles.headerCard}>
+      <Animated.View
+        entering={FadeInDown.duration(900)}
+        style={styles.headerCard}
+      >
         <View style={styles.topRow}>
           <View style={styles.iconBackgroundSmall}>
             <MaterialCommunityIcons name={iconName} size={28} color={colors.primary} />
@@ -69,7 +73,7 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
             </View>
           ) : null}
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 };

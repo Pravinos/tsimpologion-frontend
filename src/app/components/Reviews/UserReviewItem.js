@@ -525,8 +525,7 @@ const styles = StyleSheet.create({
   },
   reviewCarousel: {
     marginTop: 12,
-    height: 120,
-
+    height: 160
   },
   reviewImageSingle: {
     width: '100%',

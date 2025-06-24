@@ -14,6 +14,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
+import ModernButton from '../UI/ModernButton';
 
 interface ReviewFormProps {
   isLoggedIn: boolean;
@@ -132,7 +133,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             </View>
           ))}
           <TouchableOpacity onPress={handlePickImage} style={styles.addPhotoButton}>
-            <MaterialCommunityIcons name="camera-plus-outline" size={30} color={colors.primary} />
+            <MaterialCommunityIcons name="camera-plus-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
         </ScrollView>
         {imageUploading && (
@@ -143,17 +144,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         )}
       </View>
       
-      <TouchableOpacity 
-        style={[styles.submitButton, (isSubmitting || imageUploading) && styles.submitButtonDisabled]}
+      <ModernButton
+        title="Post Review"
         onPress={handleSubmit}
+        loading={isSubmitting}
         disabled={isSubmitting || imageUploading}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator size="small" color={colors.white} />
-        ) : (
-          <Text style={styles.submitButtonText}>SUBMIT REVIEW</Text>
-        )}
-      </TouchableOpacity>
+        style={{ marginTop: 10, marginBottom: 8 }}
+      />
     </>
   );
 };

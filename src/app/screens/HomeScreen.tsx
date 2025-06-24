@@ -191,21 +191,25 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               refreshing={isFetching}
               onRefresh={handleRefresh}
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
-                  <Text style={styles.emptyText}>
-                    {listType === 'favourites' 
-                      ? "You haven't saved any favorites yet" 
-                      : listType === 'mySpots' 
-                        ? "You haven't added any food spots yet"
-                        : "No food spots found"}
-                  </Text>
-                  <Text style={styles.emptySubText}>
-                    {listType === 'favourites' 
-                      ? "Browse popular spots and tap the heart icon to add them to your favorites"
-                      : listType === 'mySpots'}
-                  </Text>
-                </View>
+                isError ? (
+                  <View style={styles.emptyContainer}>
+                    <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
+                    <Text style={styles.emptyText}>
+                      {listType === 'favourites' 
+                        ? "You haven't saved any favorites yet" 
+                        : listType === 'mySpots' 
+                          ? "You haven't added any food spots yet"
+                          : "No food spots found"}
+                    </Text>
+                    <Text style={styles.emptySubText}>
+                      {listType === 'favourites' 
+                        ? "Browse popular spots and tap the heart icon to add them to your favorites"
+                        : listType === 'mySpots'
+                          ? "Add your first food spot to get started!"
+                          : "Try adjusting your filters or search keywords."}
+                    </Text>
+                  </View>
+                ) : null
               }
             />
           )}

@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Modal, TouchableWithoutFeedba
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
+import ModernButton from './ModernButton';
 
 interface FilterModalProps {
   visible: boolean;
@@ -121,7 +122,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Price Range</Text><View style={styles.buttonListRow}>
+                <View style={styles.labelInfoRow}>
+                  <Text style={styles.modalLabel}>Price Range</Text>
+                  <MaterialCommunityIcons name="information-outline" size={18} color={colors.mediumGray} style={styles.infoIcon} />
+                </View>
+                <View style={styles.infoBubble}>
+                  <Text style={styles.infoText}>
+                    Curious about the € signs? € means a typical meal is 5–10€ per person, €€ is 10–20€, €€€ is 20–50€, and €€€€ is 50€ or more. Choose what fits your budget!
+                  </Text>
+                </View>
+                <View style={styles.buttonListRow}>
                   {priceRangeOptions.filter(opt => opt && opt.label).map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
@@ -166,11 +176,13 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 </View>
               </View>
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalButton} onPress={onClose}>
-                  <Text style={styles.modalButtonText}>Apply</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.clearButton]}
+                <ModernButton
+                  title="Apply"
+                  onPress={onClose}
+                  style={{ flex: 1, marginRight: 6 }}
+                />
+                <ModernButton
+                  title="Clear"
                   onPress={() => {
                     setSelectedCategory('');
                     setSelectedPriceRange('');
@@ -178,9 +190,9 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     setPriceSortDirection('');
                     onClose();
                   }}
-                >
-                  <Text style={styles.modalButtonText}>Clear</Text>
-                </TouchableOpacity>
+                  variant="secondary"
+                  style={{ flex: 1, marginLeft: 6 }}
+                />
               </View>
             </Animated.View>
           </TouchableWithoutFeedback>
@@ -290,6 +302,37 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: -4,
+  },
+  infoText: {
+    color: colors.darkGray,
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  labelInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 0,
+    gap: 6,
+  },
+  infoIcon: {
+    marginLeft: 3,
+    marginTop: -10,
+  },
+  infoBubble: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
 });
 

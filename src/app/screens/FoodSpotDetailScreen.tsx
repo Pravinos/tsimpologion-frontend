@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 // Components
 import { ReviewsSection, ReviewForm } from '@/app/components/Reviews';
@@ -496,7 +497,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
           <View style={styles.mainContent}>
             {/* Modern Details Card */}
-            <View style={styles.section}>
+            <Animated.View entering={FadeInUp.duration(500).damping(18)} style={styles.section}>
               <Text style={styles.sectionTitle}>Details</Text>
               <FoodSpotDetailsSection 
                 address={foodSpot.address} 
@@ -504,6 +505,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                 website={foodSpot.info_link}
                 distance={null}
               />
+              <FoodSpotSocialLinksSection social_links={socialLinks} />
               {/* Business Hours below location, integrated, old approach */}
               {formattedHours && formattedHours.length > 0 && (
                 <View>
@@ -514,34 +516,26 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                   />
                 </View>
               )}
-            </View>
+            </Animated.View>
 
             {foodSpot.description && (
-              <View style={styles.section}>
+              <Animated.View entering={FadeInUp.duration(500).delay(80).damping(18)} style={styles.section}>
                 <Text style={styles.sectionTitle}>About</Text>
                 <FoodSpotAboutSection about={foodSpot.description} />
-              </View>
+              </Animated.View>
             )}
-
-            {Object.keys(socialLinks).length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Social Links</Text>
-                <FoodSpotSocialLinksSection social_links={socialLinks} />
-              </View>
-            )}
-
-            <View style={[styles.section, styles.reviewsCard]}>
+            
+            <Animated.View entering={FadeInUp.duration(500).delay(240).damping(18)} style={[styles.section, styles.reviewsCard]}>
               {allReviewImages.length > 0 && (
                 <View style={styles.subSection}>
                   <ImageCarousel images={allReviewImages} title="Community Photos" isCard={false} />
                 </View>
               )}
-            </View>
+            </Animated.View>
 
             {/* Reviews Section */}
-            <View style={styles.section}>
+            <Animated.View entering={FadeInUp.duration(500).delay(320).damping(18)} style={styles.section}>
               <Text style={styles.sectionTitle}>Reviews</Text>
-         
               <ReviewsSection 
                 reviews={reviews}
                 isLoading={isLoadingReviews}
@@ -549,18 +543,16 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                 onUpdateReview={handleUpdateReview}
                 onDeleteReview={handleDeleteReview}
                 onToggleLike={handleToggleReviewLike}
-                currentSortOrder={sortOrder} // Pass sortOrder state
-                onSortOrderChange={setSortOrder} // Pass setSortOrder function
+                currentSortOrder={sortOrder}
+                onSortOrderChange={setSortOrder}
                 totalReviewCount={totalReviewCount}
               />
-            </View>
-            
+            </Animated.View>
 
             {/* Leave Your Review section - only show if user doesn't have a review yet */}
             {!userHasReview && (
-              <View style={styles.section}>
+              <Animated.View entering={FadeInUp.duration(500).delay(400).damping(18)} style={styles.section}>
                 <Text style={styles.sectionTitle}>Leave Your Review</Text>
-                
                 <ReviewForm
                   isLoggedIn={!!token}
                   isSubmitting={isSubmitting}
@@ -568,7 +560,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                   onSubmit={handleSubmitReview}
                   onNavigateToLogin={() => navigation.navigate('Profile')}
                 />
-              </View>
+              </Animated.View>
             )}
           </View>
         </ScrollView>

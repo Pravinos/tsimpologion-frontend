@@ -21,6 +21,7 @@ import { updateUser, getCurrentUser, getToken, deleteImage } from '@/services/Ap
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
+import ModernButton from '../components/UI/ModernButton';
 
 interface FormErrors {
   name?: string;
@@ -358,18 +359,13 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
             </View>
           </ScrollView>
           <View style={styles.footer}>
-            <TouchableOpacity 
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <ModernButton
+              title="Save Changes"
               onPress={handleSave}
+              loading={saving}
               disabled={saving}
-              activeOpacity={0.85}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
+              style={{ marginHorizontal: 8, marginBottom: 8 }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>

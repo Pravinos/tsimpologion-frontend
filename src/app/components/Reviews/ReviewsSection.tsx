@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Review } from '../../../types/models';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { Review } from '@/app/types/appTypes';
 import ReviewItem from './ReviewItem';
 import UserReviewItem from './UserReviewItem';
 import colors from '../../styles/colors';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ReviewsProps {
   reviews: Review[];
@@ -54,6 +56,37 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
     );
     // Sorting is now handled by the query in FoodSpotDetailScreen based on currentSortOrder
   
+  // Add state for like filter toggle
+  const [showOnlyLiked, setShowOnlyLiked] = React.useState(false);
+
+  // Filter reviews based on like toggle
+  const filteredOtherReviews = showOnlyLiked
+    ? otherReviews.filter((review) => review.is_liked)
+    : otherReviews;
+
+  // Animation for pill switch
+  const pillWidth = 110; // width of each pill option
+  const pillHeight = 32;
+  const pillPadding = 3;
+  const pillThumbRadius = 16;
+  const pillThumbColor = colors.primary;
+  const pillBgColor = colors.lightGray;
+  const pillAnim = useSharedValue(currentSortOrder === 'recent' ? 0 : 1);
+  useEffect(() => {
+    pillAnim.value = currentSortOrder === 'recent' ? 0 : 1;
+  }, [currentSortOrder]);
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: withSpring(pillAnim.value * pillWidth) }],
+    backgroundColor: pillThumbColor,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: pillWidth,
+    height: pillHeight,
+    borderRadius: pillThumbRadius,
+    zIndex: 0,
+  }));
+
   if (isLoading) {
     return (
       <View style={styles.loadingReviewsContainer}>
@@ -85,23 +118,31 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
         <View style={styles.otherReviewsSection}>
           <View style={styles.otherReviewsHeader}>
             <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
+            {/* Animated pill switch for sort order */}
+            <View style={[styles.pillSwitchContainer, { width: pillWidth * 2, height: pillHeight, backgroundColor: pillBgColor, position: 'relative', overflow: 'hidden' }]}> 
+              <Animated.View style={thumbStyle} />
+              <TouchableOpacity
+                style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
+                onPress={() => onSortOrderChange('recent')}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.pillOptionText, currentSortOrder === 'recent' && styles.pillOptionTextActive]}>Most Recent</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
+                onPress={() => onSortOrderChange('liked')}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.pillOptionText, currentSortOrder === 'liked' && styles.pillOptionTextActive]}>Most Liked</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={styles.reviewActions}> 
-            <Text style={styles.sortByText}>Sort by:</Text>
-            <TouchableOpacity onPress={() => onSortOrderChange('recent')} style={[styles.sortButton, currentSortOrder === 'recent' && styles.activeSortButton]}>
-              <Text style={[styles.sortButtonText, currentSortOrder === 'recent' && styles.activeSortButtonText]}>Most Recent</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onSortOrderChange('liked')} style={[styles.sortButton, currentSortOrder === 'liked' && styles.activeSortButton]}>
-              <Text style={[styles.sortButtonText, currentSortOrder === 'liked' && styles.activeSortButtonText]}>Most Liked</Text>
-            </TouchableOpacity>
-          </View>
-
-          {otherReviews.length > 0 ? (
-            <FlatList
-              data={otherReviews}
-              keyExtractor={(item: Review) => item.id.toString()}
-              renderItem={({ item }: { item: Review }) => (
+          {filteredOtherReviews.length > 0 ? (
+            <Animated.FlatList
+              data={filteredOtherReviews}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item, index }) => (
                 <View style={styles.reviewItemContainer}>
                   <ReviewItem 
                     review={item} 
@@ -109,18 +150,19 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
                     isLiked={item.is_liked} 
                     likesCount={item.likes_count} 
                     currentUserId={userId}
+                    index={index} // Pass index for staggered animation
                   />
                 </View>
               )}
               horizontal
               showsHorizontalScrollIndicator={false}
               initialNumToRender={3}
-              contentContainerStyle={{ paddingVertical: 4, paddingHorizontal: 20 }}
+              contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
+              // Removed paddingLeft, kept small paddingRight for end spacing
             />
           ) : (
             <Text style={styles.noReviewsText}>
-              {/* This text will show if there's a user review but no other reviews */}
-              No other reviews yet.
+              {showOnlyLiked ? 'No liked reviews yet.' : 'No other reviews yet.'}
             </Text>
           )}
         </View>
@@ -155,7 +197,7 @@ const styles = StyleSheet.create({
   otherReviewsSection: {
     marginTop: 10,
   },
-  otherReviewsHeader: { // Added
+  otherReviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -166,41 +208,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.black,
   },
-  reviewCountText: { // Added (similar to old reviewCount style)
+  reviewCountText: {
     fontSize: 14,
     color: colors.darkGray,
-  },
-  reviewActions: { // Added (styles from FoodSpotDetailScreen)
-    flexDirection: 'row',
-    justifyContent: 'flex-start', // Changed from flex-end to flex-start
-    alignItems: 'center', 
-    marginBottom: 12, 
-
-  },
-  sortByText: { // Added style for Sort by text
-    fontSize: 14,
-    color: colors.darkGray,
-    fontWeight: '600',
-    marginRight: 8, // Added marginRight to space it from the first button
-  },
-  sortButton: { // Added (styles from FoodSpotDetailScreen)
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: colors.lightGray,
-    marginLeft: 0, // Was 8, set to 0 as sortByText now has marginRight
-    marginRight: 8, // Added marginRight for spacing between buttons
-  },
-  activeSortButton: { // Added (styles from FoodSpotDetailScreen)
-    backgroundColor: colors.primary,
-  },
-  sortButtonText: { // Added (styles from FoodSpotDetailScreen)
-    fontSize: 12,
-    color: colors.darkGray,
-    fontWeight: '600',
-  },
-  activeSortButtonText: { // Added (styles from FoodSpotDetailScreen)
-    color: colors.white,
   },
   reviewItemContainer: {
     width: 280,
@@ -223,6 +233,34 @@ const styles = StyleSheet.create({
     color: colors.error || '#FF3B30',
     textAlign: 'center',
     marginBottom: 15,
+  },
+  pillSwitchContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 0,
+    marginLeft: 12,
+    backgroundColor: colors.lightGray,
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  pillOption: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+  },
+  pillOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  pillOptionText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: 'bold',
+    zIndex: 2,
+  },
+  pillOptionTextActive: {
+    color: colors.white,
   },
 });
 

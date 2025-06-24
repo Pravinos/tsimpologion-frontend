@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const FoodSpotSocialLinksSection = ({ social_links }) => {
   if (!social_links || Object.keys(social_links).length === 0) return null;
@@ -10,12 +11,31 @@ const FoodSpotSocialLinksSection = ({ social_links }) => {
   };
   return (
     <>
-      {Object.entries(social_links).map(([platform, url]) => (
-        <TouchableOpacity key={platform} style={styles.linkRow} onPress={() => openLink(url)}>
-          <Feather name={getIconName(platform)} size={20} color={colors.primary} />
-          <Text style={styles.linkText}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
-        </TouchableOpacity>
-      ))}
+      {Object.entries(social_links).map(([platform, url]) => {
+        const scale = useSharedValue(1);
+        const animatedStyle = useAnimatedStyle(() => ({
+          transform: [{ scale: scale.value }],
+        }));
+        return (
+          <TouchableOpacity
+            key={platform}
+            style={styles.linkRow}
+            onPress={() => {
+              scale.value = withSpring(0.92, { damping: 6, stiffness: 180 });
+              setTimeout(() => {
+                scale.value = withSpring(1, { damping: 6, stiffness: 180 });
+                openLink(url);
+              }, 120);
+            }}
+            activeOpacity={0.85}
+          >
+            <Animated.View style={animatedStyle}>
+              <Feather name={getIconName(platform)} size={20} color={colors.primary} />
+            </Animated.View>
+            <Text style={styles.linkText}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </>
   );
 };

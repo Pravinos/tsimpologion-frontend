@@ -1,11 +1,13 @@
-import React, { useState, useRef } from 'react'; // Added useRef
+import React, { useState, useRef } from 'react';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import { MaterialCommunityIcons } from '@expo/vector-icons'; // Changed from Feather
 
-const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }) => {
+// Add index prop for animation
+const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId, index = 0 }) => {
   const [isLiking, setIsLiking] = useState(false);
   const isCoolingDownRef = useRef(false);
   
@@ -51,7 +53,10 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
   };
 
   return (
-    <View style={styles.container}>
+    <Animated.View
+      entering={FadeInUp.duration(500).delay(index * 90).damping(18)}
+      style={styles.container}
+    >
       <View style={styles.header}>
         <View style={styles.userInfo}>
           {review.user?.images && review.user.images.length > 0 ? (
@@ -102,7 +107,7 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId }
           <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -187,5 +192,10 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
 });
+
+// Add index to prop types for JS consumers
+ReviewItem.defaultProps = {
+  index: 0,
+};
 
 export default ReviewItem;

@@ -35,34 +35,34 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
 
   return (
     <View style={styles.headerContainer}>
-      <View style={styles.headerContent}>
-        <View style={styles.iconRow}>
-          <View style={styles.iconBackground}>
-            <MaterialCommunityIcons name={iconName} size={32} color={colors.primary} />
+      <View style={styles.headerCard}>
+        <View style={styles.topRow}>
+          <View style={styles.iconBackgroundSmall}>
+            <MaterialCommunityIcons name={iconName} size={28} color={colors.primary} />
           </View>
+          <Text style={styles.name}>{name}</Text>
           {showFavourite && (
             <TouchableOpacity
-              style={styles.favouriteButton}
+              style={styles.favouriteButtonSmall}
               onPress={handleToggleFavourite}
               disabled={isProcessingFavourite}
             >
               <MaterialCommunityIcons
                 name={isFavourite ? 'heart' : 'heart-outline'}
-                color={isProcessingFavourite ? colors.mediumGray : (isFavourite ? colors.error : colors.primary)}
-                size={30}
+                color={isProcessingFavourite ? colors.error : (isFavourite ? colors.error : colors.primary)}
+                size={26}
               />
             </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.name}>{name}</Text>
-        <View style={styles.ratingRow}>
-          <StarRating rating={rating || 0} size={20} selectable={false} onRatingChange={() => {}} />
+        <View style={styles.ratingRowCentered}>
+          <StarRating rating={rating || 0} size={18} selectable={false} onRatingChange={() => {}} />
           {rating != null && (
             <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
           )}
         </View>
-        <View style={styles.categoryRow}>
-          <Text style={styles.categoryText}>{category}</Text>
+        <View style={styles.infoRowCentered}>
+          {category && <Text style={styles.categoryText}>{category}</Text>}
           {price_range ? (
             <View style={styles.priceContainer}>
               <Text style={styles.priceRange}>{price_range}</Text>
@@ -76,78 +76,93 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
 
 const styles = StyleSheet.create({
   headerContainer: {
-    minHeight: 120,
-    marginBottom: 18,
+    paddingTop: 18,
+    minHeight: 18,
   },
-  headerContent: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
+  headerCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    marginHorizontal: 13,
+    marginBottom: 18,
+    padding: 20,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
     alignItems: 'center',
   },
-  iconRow: {
+  topRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    paddingHorizontal: 2,
   },
-  iconBackground: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  iconBackgroundSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.mediumGray,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+  },
+  favouriteButtonSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.mediumGray,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   name: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.black,
     textAlign: 'center',
-    marginBottom: 4,
+    flex: 1,
+    marginHorizontal: 8,
   },
-  ratingRow: {
+  ratingRowCentered: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    justifyContent: 'center',
+    marginBottom: 4,
+    width: '100%',
   },
   ratingText: {
-    marginLeft: 8,
-    fontSize: 16,
+    marginLeft: 4,
+    fontSize: 15,
     color: colors.primary,
     fontWeight: '600',
   },
-  categoryRow: {
+  infoRowCentered: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    marginTop: 4,
   },
   categoryText: {
     color: colors.darkGray,
     fontWeight: '500',
-    fontSize: 15,
-    marginRight: 8,
+    fontSize: 14,
+    marginRight: 6,
   },
   priceContainer: {
     backgroundColor: colors.mediumGray,
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 4,
+    
+    alignItems: 'center',
+    borderRadius: 5,
   },
   priceRange: {
     fontSize: 12,
     color: colors.primary,
     fontWeight: '600',
-  },
-  favouriteButton: {
-   width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.mediumGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
 });
 

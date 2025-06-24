@@ -214,12 +214,12 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             onClose={() => setFilterModalVisible(false)}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
-            selectedPriceRange={selectedPriceRange} // Added price range props
-            setSelectedPriceRange={setSelectedPriceRange} // Added price range props
+            selectedPriceRange={selectedPriceRange} 
+            setSelectedPriceRange={setSelectedPriceRange}
             sortDirection={sortDirection}
             setSortDirection={setSortDirection}
-            priceSortDirection={priceSortDirection} // Added price sort props
-            setPriceSortDirection={setPriceSortDirection} // Added price sort props
+            priceSortDirection={priceSortDirection}
+            setPriceSortDirection={setPriceSortDirection}
             categories={categories}
             sortOptions={SORT_OPTIONS}
           />
@@ -273,7 +273,6 @@ const styles = StyleSheet.create({
     width: 43, 
     height: 43, 
     borderRadius: 20, 
-    // Removed background color, assuming image will cover or use transparent
   },
   listTypeSelectorContainer: {
     marginTop: 6,

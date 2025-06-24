@@ -80,7 +80,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
       filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
       // Price sorting takes priority if selected
       if (priceSortDirection && a.price_range && b.price_range) {
-        const priceOrder = ['$', '$$', '$$$'];
+        const priceOrder = ['€', '€€', '€€€'];
         const aPrice = priceOrder.indexOf(a.price_range);
         const bPrice = priceOrder.indexOf(b.price_range);
         

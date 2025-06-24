@@ -322,7 +322,7 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
           </View>
           <View style={styles.inputContainer}>
             <Feather name="dollar-sign" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Price Range (e.g., $, $$, $$$)" value={priceRange} onChangeText={setPriceRange} />
+            <TextInput style={styles.input} placeholder="Price Range (e.g., €, €€, €€€)" value={priceRange} onChangeText={setPriceRange} />
           </View>
         </View>
 

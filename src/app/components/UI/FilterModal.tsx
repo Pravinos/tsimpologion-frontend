@@ -34,9 +34,9 @@ const FilterModal: React.FC<FilterModalProps> = ({
 }) => {
   const priceRangeOptions = [
     { label: 'All', value: '' },
-    { label: '$', value: '$' },
-    { label: '$$', value: '$$' },
-    { label: '$$$', value: '$$$' },
+    { label: '€', value: '€' },
+    { label: '€€', value: '€€' },
+    { label: '€€€', value: '€€€' },
   ];
 
   const priceSortOptions = [

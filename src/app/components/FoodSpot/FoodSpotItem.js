@@ -1,38 +1,63 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // Ensure this is the only icon import
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 import StarRating from '../UI/StarRating';
 import { getIconForCategory } from '../../utils/categoryIcons';
 
 const FoodSpotItem = ({ item, onPress }) => {
-  const iconName = getIconForCategory(item.category);
+  const scale = useRef(new RNAnimated.Value(1)).current;
+
+  const handlePressIn = () => {
+    RNAnimated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 8,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    RNAnimated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 8,
+    }).start();
+  };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
-      <View style={styles.iconContainer}>
-        <MaterialCommunityIcons name={iconName} size={24} color={colors.primary} />
-      </View>
-      <View style={styles.contentContainer}>
-        <Text style={styles.name}>{item.name}</Text>
-        <View style={styles.row}>
-          <Text style={styles.category}>{item.category}</Text>
-          {item.price_range && (
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceRange}>{item.price_range}</Text>
-            </View>
-          )}
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      android_ripple={{ color: colors.lightGray }}
+      style={({ pressed }) => [{ borderRadius: 16, marginBottom: 12 }, pressed && { opacity: 0.96 }]}
+    >
+      <RNAnimated.View style={[styles.container, { transform: [{ scale }] }]}>
+        <View style={styles.iconContainer}>
+          <MaterialCommunityIcons name={getIconForCategory(item.category)} size={24} color={colors.primary} />
         </View>
-        <View style={styles.ratingContainer}>
-          <StarRating rating={item.rating} size={16} />
-          <Text style={styles.ratingText}>
-            {item.rating != null ? item.rating.toFixed(1) : 'No ratings'}
-          </Text>
+        <View style={styles.contentContainer}>
+          <Text style={styles.name}>{item.name}</Text>
+          <View style={styles.row}>
+            <Text style={styles.category}>{item.category}</Text>
+            {item.price_range && (
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceRange}>{item.price_range}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.ratingContainer}>
+            <StarRating rating={item.rating} size={16} />
+            <Text style={styles.ratingText}>
+              {item.rating != null ? item.rating.toFixed(1) : 'No ratings'}
+            </Text>
+          </View>
         </View>
-      </View>
-      {/* Changed Feather to MaterialCommunityIcons for chevron-right */}
-      <MaterialCommunityIcons name="chevron-right" size={24} color={colors.darkGray} />
-    </TouchableOpacity>
+        <MaterialCommunityIcons name="chevron-right" size={24} color={colors.darkGray} />
+      </RNAnimated.View>
+    </Pressable>
   );
 };
 

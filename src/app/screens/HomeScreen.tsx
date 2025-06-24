@@ -6,10 +6,13 @@ import {
   FlatList, 
   TouchableOpacity,
   ActivityIndicator,
-  Image
+  Image,
+  Keyboard,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
@@ -132,95 +135,97 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     );
   }
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.welcome}>
-              {user && user.name ? `Hi ${user.name} 👋` : 'Hi 👋'}
-            </Text>
-            <Text style={styles.title}>Find the perfect spot</Text>
-            <Text style={styles.subtitle}>Explore authentic flavors near you</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
-              <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={styles.profileImage} />
-            ) : (
-              <Feather name="user" size={24} color={colors.white} />
-            )}
-          </TouchableOpacity>
-        </View>
-        <SearchBar
-          searchText={searchText}
-          setSearchText={setSearchText}
-          onFilterPress={() => setFilterModalVisible(true)}
-        />
-        <View style={styles.listTypeSelectorContainer}>
-          <ListTypeSelector
-            options={LIST_OPTIONS}
-            selectedValue={listType}
-            onSelect={handleListTypeChange}
-          />
-        </View>
-        {isError ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
-            </Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <View style={styles.container}>
+          <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
+            <View>
+              <Text style={styles.welcome}>
+                {user && user.name ? `Hi ${user.name} 👋` : 'Hi 👋'}
+              </Text>
+              <Text style={styles.title}>Find the perfect spot</Text>
+              <Text style={styles.subtitle}>Explore authentic flavors near you</Text>
+            </View>
             <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => refetch()}
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('Profile')}
             >
-              <Text style={styles.retryText}>Try Again</Text>
+              {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
+                <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={styles.profileImage} />
+              ) : (
+                <Feather name="user" size={24} color={colors.white} />
+              )}
             </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredFoodSpots}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-            refreshing={isFetching}
-            onRefresh={handleRefresh}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
-                <Text style={styles.emptyText}>
-                  {listType === 'favourites' 
-                    ? "You haven't saved any favorites yet" 
-                    : listType === 'mySpots' 
-                      ? "You haven't added any food spots yet"
-                      : "No food spots found"}
-                </Text>
-                <Text style={styles.emptySubText}>
-                  {listType === 'favourites' 
-                    ? "Browse popular spots and tap the heart icon to add them to your favorites"
-                    : listType === 'mySpots'}
-                </Text>
-              </View>
-            }
+          </Animated.View>
+          <SearchBar
+            searchText={searchText}
+            setSearchText={setSearchText}
+            onFilterPress={() => setFilterModalVisible(true)}
           />
-        )}
-        <FilterModal
-          visible={filterModalVisible}
-          onClose={() => setFilterModalVisible(false)}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          selectedPriceRange={selectedPriceRange} // Added price range props
-          setSelectedPriceRange={setSelectedPriceRange} // Added price range props
-          sortDirection={sortDirection}
-          setSortDirection={setSortDirection}
-          priceSortDirection={priceSortDirection} // Added price sort props
-          setPriceSortDirection={setPriceSortDirection} // Added price sort props
-          categories={categories}
-          sortOptions={SORT_OPTIONS}
-        />
-      </View>
-    </SafeAreaView>
+          <View style={styles.listTypeSelectorContainer}>
+            <ListTypeSelector
+              options={LIST_OPTIONS}
+              selectedValue={listType}
+              onSelect={handleListTypeChange}
+            />
+          </View>
+          {isError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => refetch()}
+              >
+                <Text style={styles.retryText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredFoodSpots}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id.toString()}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              refreshing={isFetching}
+              onRefresh={handleRefresh}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
+                  <Text style={styles.emptyText}>
+                    {listType === 'favourites' 
+                      ? "You haven't saved any favorites yet" 
+                      : listType === 'mySpots' 
+                        ? "You haven't added any food spots yet"
+                        : "No food spots found"}
+                  </Text>
+                  <Text style={styles.emptySubText}>
+                    {listType === 'favourites' 
+                      ? "Browse popular spots and tap the heart icon to add them to your favorites"
+                      : listType === 'mySpots'}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+          <FilterModal
+            visible={filterModalVisible}
+            onClose={() => setFilterModalVisible(false)}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedPriceRange={selectedPriceRange} // Added price range props
+            setSelectedPriceRange={setSelectedPriceRange} // Added price range props
+            sortDirection={sortDirection}
+            setSortDirection={setSortDirection}
+            priceSortDirection={priceSortDirection} // Added price sort props
+            setPriceSortDirection={setPriceSortDirection} // Added price sort props
+            categories={categories}
+            sortOptions={SORT_OPTIONS}
+          />
+        </View>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

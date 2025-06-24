@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 
@@ -29,8 +30,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
   setSortDirection,
   priceSortDirection,
   setPriceSortDirection,
-  categories = [], // Add default empty array
-  sortOptions = [], // Add default empty array
+  categories = [],
+  sortOptions = [],
 }) => {
   const priceRangeOptions = [
     { label: 'All', value: '' },
@@ -45,13 +46,56 @@ const FilterModal: React.FC<FilterModalProps> = ({
     { label: 'Most Expensive First', value: 'desc' },
   ];
 
+  const [isMounted, setIsMounted] = useState(visible);
+  const overlayOpacity = useSharedValue(0);
+  const modalTranslateY = useSharedValue(60);
+  const modalOpacity = useSharedValue(0);
+
+  // Show modal when visible becomes true
+  useEffect(() => {
+    if (visible) {
+      setIsMounted(true);
+      overlayOpacity.value = withTiming(1, { duration: 250 });
+      modalTranslateY.value = withTiming(0, { duration: 300 });
+      modalOpacity.value = withTiming(1, { duration: 300 });
+    } else if (isMounted) {
+      // Animate out, then unmount
+      overlayOpacity.value = withTiming(0, { duration: 250 });
+      modalTranslateY.value = withTiming(60, { duration: 300 });
+      modalOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
+        if (finished) runOnJS(setIsMounted)(false);
+      });
+    }
+  }, [visible]);
+
+  const handleClose = useCallback(() => {
+    overlayOpacity.value = withTiming(0, { duration: 250 });
+    modalTranslateY.value = withTiming(60, { duration: 300 });
+    modalOpacity.value = withTiming(0, { duration: 300 }, (finished) => {
+      if (finished) {
+        runOnJS(setIsMounted)(false);
+        runOnJS(onClose)();
+      }
+    });
+  }, [onClose]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
+  const modalStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: modalTranslateY.value }],
+    opacity: modalOpacity.value,
+  }));
+
+  if (!isMounted) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalContent}>
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <Animated.View style={[styles.modalOverlay, overlayStyle]}>
+          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+            <Animated.View style={[styles.modalContent, modalStyle]}>
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <MaterialCommunityIcons name="close" size={24} color={colors.darkGray} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Filter & Sort</Text>
@@ -138,9 +182,9 @@ const FilterModal: React.FC<FilterModalProps> = ({
                   <Text style={styles.modalButtonText}>Clear</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
-        </View>
+        </Animated.View>
       </TouchableWithoutFeedback>
     </Modal>
   );

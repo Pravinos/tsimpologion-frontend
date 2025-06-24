@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import colors from '../../styles/colors';
 
 interface ListOption {
@@ -13,6 +14,46 @@ interface ListTypeSelectorProps {
   onSelect: (value: string) => void;
 }
 
+const AnimatedPill: React.FC<{
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}> = ({ label, selected, onPress }) => {
+  const scale = useSharedValue(selected ? 1.08 : 1);
+
+  useEffect(() => {
+    scale.value = withTiming(selected ? 1.08 : 1, { duration: 180 });
+  }, [selected]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    backgroundColor: selected ? colors.primary : colors.white,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.optionButton,
+        selected ? styles.optionButtonSelected : styles.optionButtonUnselected,
+        animatedStyle,
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.8}
+        style={styles.touchable}
+      >
+        <Text style={[
+          styles.optionButtonText,
+          selected && styles.optionButtonTextSelected
+        ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
 const ListTypeSelector: React.FC<ListTypeSelectorProps> = ({ 
   options, 
   selectedValue, 
@@ -21,21 +62,12 @@ const ListTypeSelector: React.FC<ListTypeSelectorProps> = ({
   return (
     <View style={styles.container}>
       {options.map(opt => (
-        <TouchableOpacity
+        <AnimatedPill
           key={opt.value}
-          style={[
-            styles.optionButton,
-            selectedValue === opt.value && styles.optionButtonSelected
-          ]}
+          label={opt.label}
+          selected={selectedValue === opt.value}
           onPress={() => onSelect(opt.value)}
-        >
-          <Text style={[
-            styles.optionButtonText, 
-            selectedValue === opt.value && styles.optionButtonTextSelected
-          ]}>
-            {opt.label}
-          </Text>
-        </TouchableOpacity>
+        />
       ))}
     </View>
   );
@@ -47,27 +79,36 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   optionButton: {
-    backgroundColor: colors.white, 
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
     marginRight: 12,
-    borderWidth: 1, 
+    borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionButtonSelected: {
-    backgroundColor: colors.primary,
     borderColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
+  },
+  optionButtonUnselected: {
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  touchable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    minWidth: 40,
   },
   optionButtonText: {
     color: colors.darkGray,

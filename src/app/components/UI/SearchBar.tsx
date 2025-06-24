@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 
@@ -10,9 +11,25 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilterPress }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const scale = useSharedValue(1);
+  const shadow = useSharedValue(1);
+
+  React.useEffect(() => {
+    scale.value = withTiming(isFocused ? 1.03 : 1, { duration: 180 });
+    shadow.value = withTiming(isFocused ? 4 : 1, { duration: 180 });
+  }, [isFocused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    elevation: shadow.value,
+    shadowRadius: shadow.value,
+    shadowOpacity: isFocused ? 0.13 : 0.05,
+  }));
+
   return (
-    <View style={styles.searchContainer}>     
-     <View style={styles.searchBar}>
+    <View style={styles.searchContainer}>
+      <Animated.View style={[styles.searchBar, animatedStyle]}>
         <Feather name="search" size={20} color={colors.darkGray} />
         <TextInput
           style={[styles.searchInput, { fontSize: 13 }]}
@@ -22,8 +39,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilt
           onChangeText={setSearchText}
           autoCapitalize="none"
           autoCorrect={false}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
-      </View>
+      </Animated.View>
       <TouchableOpacity
         style={styles.filterButton}
         onPress={onFilterPress}

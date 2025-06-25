@@ -83,6 +83,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [sortOrder, setSortOrder] = useState<'recent' | 'liked'>('recent'); // Added
+  const [isDeletingReview, setIsDeletingReview] = useState(false); // NEW: State to track deletion in progress
 
   // React Query for food spot details
   const {
@@ -354,28 +355,43 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   const deleteReviewMutation = useMutation({
     mutationFn: (reviewId: number) => deleteReview(id, reviewId),
-    onSuccess: () => {
+    onMutate: () => {
+      setIsDeletingReview(true);
+    },
+    onSuccess: (_, reviewId) => {
       Alert.alert('Success', 'Your review has been deleted.');
+      queryClient.setQueryData(['userReview', id, user?.id], null);
+      queryClient.setQueryData(['foodSpotReviews', id, sortOrder], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          reviews: oldData.reviews.filter((r: any) => r.id !== reviewId),
+          total: Math.max(0, (oldData.total || 1) - 1),
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      setIsDeletingReview(false);
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
       Alert.alert('Error', `Failed to delete review: ${errorMessage}`);
+      setIsDeletingReview(false);
     },
   });
 
   const handleReviewDeleted = (reviewId: number) => {
+    if (isDeletingReview) return; // Prevent double-tap
     Alert.alert(
       'Confirm Deletion',
       'Are you sure you want to delete your review?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
+          style: 'destructive',
           onPress: () => deleteReviewMutation.mutate(reviewId),
-          style: 'destructive' 
         },
       ]
     );
@@ -587,6 +603,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                 isLoggedIn={!!token}
                 isSubmitting={isSubmitting}
                 imageUploading={imageUploading}
+                isDeleting={isDeletingReview}
                 onSubmit={handleReviewSubmit}
                 onUpdate={handleReviewUpdate}
                 onDelete={handleReviewDeleted}

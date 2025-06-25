@@ -12,6 +12,7 @@ interface UserReviewCardProps {
   isLoggedIn: boolean;
   isSubmitting: boolean;
   imageUploading: boolean;
+  isDeleting?: boolean;
   onSubmit: (rating: number, comment: string, images: ImagePicker.ImagePickerAsset[]) => Promise<void>;
   onUpdate: (reviewId: number, data: { rating?: number; comment?: string; newImages?: ImagePicker.ImagePickerAsset[], deletedImageIds?: number[] }) => void;
   onDelete: (reviewId: number) => void;
@@ -35,6 +36,7 @@ export const UserReviewCard: React.FC<UserReviewCardProps> = ({
   isLoggedIn,
   isSubmitting,
   imageUploading,
+  isDeleting = false,
   onSubmit,
   onUpdate,
   onDelete,
@@ -58,6 +60,7 @@ export const UserReviewCard: React.FC<UserReviewCardProps> = ({
           likesCount={userReview.likes_count}
           isSubmitting={isSubmitting}
           imageUploading={imageUploading}
+          isDeleting={isDeleting}
         />
       ) : (
         <ReviewForm

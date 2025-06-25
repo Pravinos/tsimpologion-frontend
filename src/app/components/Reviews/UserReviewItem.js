@@ -8,7 +8,7 @@ import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import { ImageCarousel } from '../UI';
 import { compressImage } from '../../utils/imageUtils';
 
-const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, likesCount, isSubmitting = false, imageUploading = false }) => {
+const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, likesCount, isSubmitting = false, imageUploading = false, isDeleting = false }) => {
 
   // Validate review object
   if (!review) {
@@ -24,7 +24,6 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   const [editRating, setEditRating] = useState(review.rating || 0);
   const [editComment, setEditComment] = useState(review.comment || '');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isProcessingLike, setIsProcessingLike] = useState(false);
   const isLikeCoolingDownRef = useRef(false);
 
@@ -95,32 +94,9 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Review',
-      'Are you sure you want to delete your review? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsDeleting(true);
-              await onDelete(review.id);
-              Alert.alert('Success', 'Your review has been deleted successfully!');
-            } catch (error) {
-              console.error('Failed to delete review:', error);
-              Alert.alert('Error', 'Failed to delete your review. Please try again.');
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+    if (isDeleting) return; // Prevent double-tap
+    // Remove confirmation here; parent handles it
+    onDelete(review.id);
   };
 
   const handleLikePress = () => {
@@ -224,7 +200,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
                 e.stopPropagation();
                 handleDelete();
               }}
-              disabled={isUpdating} // Added disabled state
+              disabled={isUpdating || isDeleting} // Add isDeleting to disabled
             >
               <MaterialCommunityIcons name="trash-can" size={16} color={colors.error} />
             </TouchableOpacity>

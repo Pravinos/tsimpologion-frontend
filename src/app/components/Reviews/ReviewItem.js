@@ -44,7 +44,7 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId, 
     if (onToggleLike && typeof review.id === 'number') {
       isCoolingDownRef.current = true;
       setIsLiking(true);
-      onToggleLike(review.id);
+      onToggleLike(review.id, displayIsLiked);
       setTimeout(() => {
         isCoolingDownRef.current = false;
         setIsLiking(false);
@@ -94,14 +94,14 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId, 
           <TouchableOpacity 
             onPress={handleLikePress} 
             style={styles.likeButton}
-            disabled={isLiking} // Added disabled state
+            disabled={isLiking}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <MaterialCommunityIcons 
               name={displayIsLiked ? "heart" : "heart-outline"} 
               size={24} 
-              color={isLiking ? colors.mediumGray : (displayIsLiked ? '#D32F2F' : colors.mediumGray)} // Dim color when liking
-              style={{ opacity: displayIsLiked && !isLiking ? 1 : 0.6 }} // Adjust opacity based on liking state
+              color={isLiking ? colors.mediumGray : (displayIsLiked ? '#D32F2F' : colors.mediumGray)}
+              style={{ opacity: displayIsLiked && !isLiking ? 1 : 0.6 }}
             />
           </TouchableOpacity>
           <Text style={styles.likesCountText}>{displayLikesCount} {displayLikesCount === 1 ? 'Like' : 'Likes'}</Text>
@@ -113,27 +113,27 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId, 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.backgroundWarm, // Use warm background
-    padding: 12, // Increased padding
-    borderRadius: 12, // Increased border radius
-    marginBottom: 12, // Adjusted margin
+    backgroundColor: colors.backgroundWarm,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1, // Subtle shadow
+    shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start', // Align items to the top for better alignment of icon and stars
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   userInfo: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Align icon and text to the top
-    flex: 1, // Allow user info to take available space
-    marginRight: 10, // Add space between name and stars
+    alignItems: 'flex-start',
+    flex: 1,
+    marginRight: 10,
   },
   userImage: {
     width: 30,
@@ -142,16 +142,16 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   userInitial: {
-    width: 34, // Slightly larger
+    width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.warmAccent1, // Use warm accent for initials background
+    backgroundColor: colors.warmAccent1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10, // Adjusted margin
+    marginRight: 10,
   },
-  userInfoText: { // New style for the text container
-    flex: 1, // Allow text container to shrink
+  userInfoText: {
+    flex: 1,
   },
   initialText: {
     color: colors.white,
@@ -181,11 +181,11 @@ const styles = StyleSheet.create({
   likeSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8, // Ensure some space from content above
+    marginTop: 8,
   },
   likeButton: {
     marginRight: 5, 
-    padding: 6, // Slightly increased padding for touchability
+    padding: 6,
   },
   likesCountText: {
     fontSize: 14,
@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// Add index to prop types for JS consumers
 ReviewItem.defaultProps = {
   index: 0,
 };

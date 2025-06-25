@@ -1,34 +1,31 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Review } from '@/app/types/appTypes';
 import ReviewItem from './ReviewItem';
-import UserReviewItem from './UserReviewItem';
+import ReviewItemSkeleton from './ReviewItemSkeleton';
 import colors from '../../styles/colors';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ReviewsProps {
   reviews: Review[];
   isLoading: boolean;
+  isRefetching?: boolean;
   userId?: number | null;
-  onUpdateReview: (reviewId: number, data: { rating: number; comment: string }) => Promise<void>;
-  onDeleteReview: (reviewId: number) => Promise<void>;
-  onToggleLike: (reviewId: number) => Promise<void>; 
-  currentSortOrder?: 'recent' | 'liked'; 
-  onSortOrderChange: (sortOrder: 'recent' | 'liked') => void; // Added
-  totalReviewCount: number; // Added
+  onToggleLike: (reviewId: number, isLiked: boolean) => void;
+  sortOrder?: 'recent' | 'liked';
+  onSortChange: (sortOrder: 'recent' | 'liked') => void;
+  totalReviewCount: number;
 }
 
 const ReviewsSection: React.FC<ReviewsProps> = ({
   reviews,
   isLoading,
+  isRefetching,
   userId,
-  onUpdateReview,
-  onDeleteReview,
-  onToggleLike, 
-  currentSortOrder,
-  onSortOrderChange, // Added
-  totalReviewCount // Added
+  onToggleLike,
+  sortOrder,
+  onSortChange,
+  totalReviewCount,
 }) => {
   // Data validation
   if (!reviews || !Array.isArray(reviews)) {
@@ -40,135 +37,107 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
     );
   }
 
-  // Find the user's review if it exists
-  const userReview = userId ? reviews.find((review: Review) =>
-    review.user_id === userId || 
-    (typeof review.user === 'object' && review.user?.id === userId)
-  ) : null;
-  
-  // Filter out other reviews
-  const otherReviews = reviews
-    .filter((review: Review) =>
-      !userId || (
-        review.user_id !== userId &&
-        !(typeof review.user === 'object' && review.user?.id === userId)
-      )
-    );
-    // Sorting is now handled by the query in FoodSpotDetailScreen based on currentSortOrder
-  
-  // Add state for like filter toggle
   const [showOnlyLiked, setShowOnlyLiked] = React.useState(false);
 
-  // Filter reviews based on like toggle
-  const filteredOtherReviews = showOnlyLiked
-    ? otherReviews.filter((review) => review.is_liked)
-    : otherReviews;
+  const filteredReviews = showOnlyLiked
+    ? reviews.filter((review) => review.is_liked)
+    : reviews;
 
-  // Animation for pill switch
-  const pillWidth = 110; // width of each pill option
+  const pillWidth = 110;
   const pillHeight = 32;
-  const pillPadding = 3;
-  const pillThumbRadius = 16;
   const pillThumbColor = colors.primary;
   const pillBgColor = colors.lightGray;
-  const pillAnim = useSharedValue(currentSortOrder === 'recent' ? 0 : 1);
+
+  const translateX = useSharedValue(sortOrder === 'recent' ? 0 : pillWidth);
+
   useEffect(() => {
-    pillAnim.value = currentSortOrder === 'recent' ? 0 : 1;
-  }, [currentSortOrder]);
+    translateX.value = withSpring(sortOrder === 'recent' ? 0 : pillWidth, {
+      damping: 18,
+      stiffness: 120,
+    });
+  }, [sortOrder, pillWidth]);
+
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withSpring(pillAnim.value * pillWidth) }],
+    transform: [{ translateX: translateX.value }],
     backgroundColor: pillThumbColor,
     position: 'absolute',
     left: 0,
     top: 0,
     width: pillWidth,
     height: pillHeight,
-    borderRadius: pillThumbRadius,
+    borderRadius: 16,
     zIndex: 0,
   }));
 
   if (isLoading) {
     return (
-      <View style={styles.loadingReviewsContainer}>
-        <Text style={styles.loadingText}>Loading reviews...</Text>
+      <View style={styles.otherReviewsSection}>
+        <View style={styles.otherReviewsHeader}>
+          <Text style={styles.reviewCountText}>Loading Reviews...</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}>
+          {[...Array(3)].map((_, index) => <ReviewItemSkeleton key={index} />)}
+        </ScrollView>
       </View>
     );
   }
   
   return (
     <>
-      {/* User's own review section */}
-      {userReview && (
-        <View style={styles.userReviewSection}>
-          <Text style={styles.userReviewTitle}>Your Review</Text>
-          <UserReviewItem 
-            key={userReview.id}
-            review={userReview}
-            onUpdate={onUpdateReview}
-            onDelete={onDeleteReview}
-            onToggleLike={onToggleLike} // Pass handler
-            isLiked={userReview.is_liked} // Pass isLiked
-            likesCount={userReview.likes_count} // Pass likesCount
-          />
-        </View>
-      )}
-      
-      {/* Other users' reviews section */}
-      {otherReviews.length > 0 || userReview ? ( // Show this section if there are other reviews OR if there's a user review (to show sort options)
+      {reviews.length > 0 ? (
         <View style={styles.otherReviewsSection}>
           <View style={styles.otherReviewsHeader}>
             <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
-            {/* Animated pill switch for sort order */}
             <View style={[styles.pillSwitchContainer, { width: pillWidth * 2, height: pillHeight, backgroundColor: pillBgColor, position: 'relative', overflow: 'hidden' }]}> 
               <Animated.View style={thumbStyle} />
               <TouchableOpacity
                 style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
-                onPress={() => onSortOrderChange('recent')}
+                onPress={() => onSortChange('recent')}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.pillOptionText, currentSortOrder === 'recent' && styles.pillOptionTextActive]}>Most Recent</Text>
+                <Text style={[styles.pillOptionText, sortOrder === 'recent' && styles.pillOptionTextActive]}>Most Recent</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
-                onPress={() => onSortOrderChange('liked')}
+                onPress={() => onSortChange('liked')}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.pillOptionText, currentSortOrder === 'liked' && styles.pillOptionTextActive]}>Most Liked</Text>
+                <Text style={[styles.pillOptionText, sortOrder === 'liked' && styles.pillOptionTextActive]}>Most Liked</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {filteredOtherReviews.length > 0 ? (
-            <Animated.FlatList
-              data={filteredOtherReviews}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item, index }) => (
-                <View style={styles.reviewItemContainer}>
-                  <ReviewItem 
-                    review={item} 
-                    onToggleLike={onToggleLike} 
-                    isLiked={item.is_liked} 
-                    likesCount={item.likes_count} 
-                    currentUserId={userId}
-                    index={index} // Pass index for staggered animation
-                  />
-                </View>
-              )}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              initialNumToRender={3}
-              contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
-              // Removed paddingLeft, kept small paddingRight for end spacing
-            />
-          ) : (
-            <Text style={styles.noReviewsText}>
-              {showOnlyLiked ? 'No liked reviews yet.' : 'No other reviews yet.'}
-            </Text>
-          )}
+          <View style={isRefetching ? styles.refetchingContainer : undefined}>
+            {filteredReviews.length > 0 ? (
+              <Animated.FlatList
+                data={filteredReviews}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item, index }) => (
+                  <View style={styles.reviewItemContainer}>
+                    <ReviewItem 
+                      review={item} 
+                      onToggleLike={onToggleLike} 
+                      isLiked={item.is_liked} 
+                      likesCount={item.likes_count} 
+                      currentUserId={userId}
+                      index={index} // Pass index for staggered animation
+                    />
+                  </View>
+                )}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                initialNumToRender={3}
+                contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
+              />
+            ) : (
+              <Text style={styles.noReviewsText}>
+                {showOnlyLiked ? 'No liked reviews yet.' : 'No other reviews yet.'}
+              </Text>
+            )}
+          </View>
         </View>
       ) : (
         <Text style={styles.noReviewsText}>
-          {/* This text will show if there are no reviews at all (neither user's nor others) */}
           No reviews yet. Be the first to leave a review!
         </Text>
       )}
@@ -185,15 +154,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.darkGray,
   },
-  userReviewSection: {
-    marginBottom: 20,
-  },
-  userReviewTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: colors.primary,
-  },
   otherReviewsSection: {
     marginTop: 10,
   },
@@ -202,11 +162,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-  },
-  otherReviewsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.black,
   },
   reviewCountText: {
     fontSize: 14,
@@ -234,6 +189,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 15,
   },
+  refetchingContainer: {
+    opacity: 0.5,
+  },
   pillSwitchContainer: {
     flexDirection: 'row',
     borderRadius: 20,
@@ -249,9 +207,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 16,
     backgroundColor: 'transparent',
-  },
-  pillOptionActive: {
-    backgroundColor: colors.primary,
   },
   pillOptionText: {
     fontSize: 13,

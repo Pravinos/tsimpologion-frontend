@@ -26,7 +26,7 @@ const FoodSpotDetailsSection = ({ address, distance, phone, website }) => (
     {website ? (
       <TouchableOpacity style={styles.detailRow} onPress={() => Linking.openURL(website)}>
         <Feather name="map" size={20} color={colors.primary} />
-        <Text style={[styles.detailText, { color: colors.primary }]}>See location here</Text>
+        <Text style={[styles.detailText, { color: colors.primary }]}>Open location on map</Text>
       </TouchableOpacity>
     ) : null}
   </>

@@ -184,7 +184,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               </Text>
             </View>
           )}
-          <View>
+          <View style={styles.userTextContainer}>
             <Text style={styles.username}>{userName} (You)</Text>
             {formattedDate && (
               <Text style={styles.date}>{formattedDate}</Text>
@@ -237,7 +237,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               }}
               disabled={isUpdating}
             >
-              <MaterialCommunityIcons name="close" size={16} color={colors.white} />
+              <MaterialCommunityIcons name="close" size={16} color={colors.error} />
             </TouchableOpacity>
           </View>
         )}
@@ -385,13 +385,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 8,
   },
   userImage: {
     width: 30,
@@ -412,6 +413,9 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  userTextContainer: {
+    flex: 1,
   },
   username: {
     fontWeight: 'bold',

@@ -1,5 +1,5 @@
 // filepath: c:\tsimpologion-app\tsimpologion-frontend\app\screens\FoodSpotDetailScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { ScrollView } from 'react-native';
 import {
@@ -17,7 +17,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 // Components
-import { ReviewsSection, ReviewForm } from '@/app/components/Reviews';
+import {
+  ReviewsSection,
+  ReviewForm,
+  UserReviewCard
+} from '@/app/components/Reviews';
 import { 
   FoodSpotHeader, 
   FoodSpotDetailsSection, 
@@ -27,9 +31,8 @@ import {
 import { ImageCarousel, BusinessHours } from '@/app/components/UI';
 
 // Hooks and utilities
-import { useEffect } from 'react';
 import { useAuth } from '@/services/AuthProvider';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { getFullImageUrl } from '@/app/utils/getFullImageUrl';
 import { useBusinessHours } from '@/app/hooks/useBusinessHours';
 import { parseSocialLinks } from '@/app/utils/parseSocialLinks';
@@ -101,35 +104,72 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     // No staleTime, so it defaults to 0 and is always considered stale.
   });
 
-  // React Query for reviews
+  // NEW: Query for the user's own review for this food spot.
+  // This is fetched independently and not affected by sorting.
+  const { data: userReview, isLoading: isLoadingUserReview } = useQuery({
+    queryKey: ['userReview', id, user?.id],
+    queryFn: async () => {
+      // We fetch all reviews and then select the user's one.
+      // This is because there's no dedicated endpoint to get a single user's review.
+      // React Query will cache this, so it's efficient on the client-side.
+      if (!user) return null;
+      const response = await getReviews(id);
+      const allReviews = response.data?.data || response.data || [];
+      const foundReview = allReviews.find((review: Review) => review.user_id === user?.id);
+      
+      if (foundReview) {
+        return {
+          ...foundReview,
+          is_liked: foundReview.is_liked ?? false,
+          likes_count: foundReview.likes_count ?? 0,
+        };
+      }
+      return null;
+    },
+    enabled: !!user, // Only run if a user is logged in.
+    staleTime: 1000 * 60 * 5, // User's review is unlikely to change often.
+  });
+
+  // MODIFIED: Query for the list of other users' reviews.
+  // This query is affected by the sortOrder state.
   const {
     data: reviewsResult,
     isLoading: isLoadingReviews,
+    isFetching: isFetchingReviews, // Use this for the loading indicator on the list
     isError: isReviewsError,
     refetch: refetchReviews,
   } = useQuery<{ reviews: Review[]; total: number }>({
-    queryKey: ['foodSpotReviews', id, sortOrder], // Include sortOrder in queryKey
+    queryKey: ['foodSpotReviews', id, sortOrder], // Depends on sortOrder
     queryFn: async () => {
-      let apiParams = {};
-      if (sortOrder === 'liked') {
-        apiParams = { sort: 'most_liked' };
-      } else if (sortOrder === 'recent') {
-        apiParams = { sort: 'recent' }; // Updated to use 'recent' for sorting by most recent
-      }
+      const apiParams = {
+        sort: sortOrder === 'liked' ? 'most_liked' : 'recent',
+      };
       const response = await getReviews(id, apiParams);
       const reviewsData = response.data?.data || response.data || [];
       const totalCount = response.data?.meta?.total ?? response.data?.total ?? foodSpot?.reviews_count ?? reviewsData.length;
-      const mappedReviews = reviewsData.map((review: Review) => ({
+      
+      // Exclude the user's own review from this list.
+      const otherUsersReviews = user 
+        ? reviewsData.filter((review: Review) => review.user_id !== user.id)
+        : reviewsData;
+
+      // Adjust total count if the user's review was in the fetched list
+      const adjustedTotal = (user && userReview && reviewsData.some((r: Review) => r.user_id === user.id))
+        ? totalCount - 1
+        : totalCount;
+
+      const mappedReviews = otherUsersReviews.map((review: Review) => ({
         ...review,
         is_liked: review.is_liked ?? false,
         likes_count: review.likes_count ?? 0,
       }));
-      return { reviews: mappedReviews, total: totalCount };
+      return { reviews: mappedReviews, total: adjustedTotal };
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
+    placeholderData: keepPreviousData, // Smooth transitions when sorting
   });
 
-  const reviews = reviewsResult?.reviews || [];
+  const otherReviews = reviewsResult?.reviews || [];
   const totalReviewCount = reviewsResult?.total ?? foodSpot?.reviews_count ?? 0;
 
   // React Query for favorites
@@ -154,12 +194,11 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   
   const socialLinks = parseSocialLinks(foodSpot?.social_links);
 
-  const allReviewImages = reviews.flatMap(review => review.images?.map(img => getFullImageUrl(img)) || []);
+  const otherReviewImages = otherReviews.flatMap((review: Review) => review.images?.map(img => getFullImageUrl(img)) || []);
+  const userReviewImages = userReview?.images?.map((img: { id: number; url: string; }) => getFullImageUrl(img)) || [];
+  const allReviewImages = [...new Set([...otherReviewImages, ...userReviewImages])].filter(Boolean);
 
-  const userHasReview = token && reviews.some((review: Review) =>
-    review.user_id === user?.id || 
-    (typeof review.user === 'object' && review.user?.id === user?.id)
-  );
+  const userHasReview = !!userReview;
 
   const toggleFavouriteMutation = useMutation({    
     mutationFn: async (currentIsFavourite: boolean) => {
@@ -191,249 +230,232 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['favourites'] });
-      queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
     },
   });
 
-  const handleToggleFavourite = async () => {
-    if (!token) {
-      Alert.alert('Login Required', 'Please log in to add favourites.');
-      navigation.navigate('Profile');
-      return;
-    }
-    if (!foodSpot || typeof isFavourite === 'undefined') return;
+  const handleToggleFavourite = () => {
+    if (!foodSpot) return;
     toggleFavouriteMutation.mutate(isFavourite);
   };
 
-  const handleSubmitReview = async (
-    rating: number, 
-    comment: string, 
-    images: ImagePicker.ImagePickerAsset[]
-  ) => {
-    if (!token) {
-      Alert.alert('Login Required', 'Please log in to leave a review.');
-      navigation.navigate('Profile');
-      return;
-    }
-
-    try {
+  const reviewMutation = useMutation({
+    mutationFn: async ({ reviewData, reviewId }: { reviewData: any, reviewId?: number }) => {
       setIsSubmitting(true);
-      
-      // 1. Create the review
-      const reviewRes = await createReview(id, {
-        rating: rating as 1 | 2 | 3 | 4 | 5,
-        comment: comment,
-        user_id: user?.id
-      });
-      
-      const reviewId = reviewRes.data?.id || reviewRes.data?.data?.id;
-
-      // 2. Upload images if selected
-      if (images && images.length > 0 && reviewId) {
-        setImageUploading(true);
-        
-        const formData = new FormData();
-        images.forEach(image => {
-          const uri = image.uri;
-          let fileName = image.fileName;
-          let fileType = image.mimeType || image.type;
-          
-          if (!fileName) {
-            const uriParts = uri.split('/');
-            fileName = uriParts[uriParts.length - 1] || `review_${Date.now()}.jpg`;
-          }
-          
-          if (!fileType) {
-            if (fileName.endsWith('.png')) fileType = 'image/png';
-            else fileType = 'image/jpeg';
-          }
-          
-          if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
-            fileName += fileType === 'image/png' ? '.png' : '.jpg';
-          }
-          
-          // @ts-ignore: React Native FormData allows this object for file upload
-          formData.append('images[]', { uri, type: fileType, name: fileName });
-        });
-
-        await uploadImage('reviews', reviewId, formData);
-        setImageUploading(false);
+      if (reviewId) {
+        return updateReview(id, reviewId, reviewData);
+      } else {
+        return createReview(id, reviewData);
       }
-
-      // 3. Refresh data
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
-      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
-      await refetchSpot();
-      
-      Alert.alert('Success', 'Your review has been submitted successfully!');
-    } catch (err: any) {
-      console.error('Failed to submit review:', err, err?.response?.data);
-      const errorMessage = err.response?.data?.message || 'Failed to submit your review. Please try again.';
-      Alert.alert('Error', errorMessage);
-    } finally {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
+      queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      refetchSpot();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
+      Alert.alert('Error', `Failed to submit review: ${errorMessage}`);
+    },
+    onSettled: () => {
       setIsSubmitting(false);
-      setImageUploading(false);
-    }
-  };
+    },
+  });
 
-  // Handler to update an existing review
-  const handleUpdateReview = async (reviewId: number, data: { 
-    rating?: number; 
-    comment?: string; 
-    newImages?: ImagePicker.ImagePickerAsset[];
-    deletedImageIds?: number[];
-  }) => {
-    try {
-      // 1. Update text if it's provided
-      if (typeof data.rating === 'number' || typeof data.comment === 'string') {
-        await updateReview(id, reviewId, { rating: data.rating, comment: data.comment });
-      }
-
-      // 2. Delete images marked for deletion
-      if (data.deletedImageIds && data.deletedImageIds.length > 0) {
-        await Promise.all(
-          data.deletedImageIds.map(imageId => deleteImage('reviews', reviewId, imageId))
-        );
-      }
-
-      // 3. If there are new images, upload them
-      if (data.newImages && data.newImages.length > 0) {
-        setImageUploading(true);
-        const formData = new FormData();
-        
-        data.newImages.forEach(image => {
-          const uri = image.uri;
-          let fileName = image.fileName;
-          let fileType = image.mimeType || image.type;
-
-          if (!fileName) {
-            const uriParts = uri.split('/');
-            fileName = uriParts[uriParts.length - 1] || `review_${Date.now()}.jpg`;
-          }
-
-          if (!fileType) {
-            if (fileName.endsWith('.png')) fileType = 'image/png';
-            else fileType = 'image/jpeg';
-          }
-          // @ts-ignore
-          formData.append('images[]', { uri, type: fileType, name: fileName });
-        });
-
-        await uploadImage('reviews', reviewId, formData);
-        setImageUploading(false);
-      }
-
-      // 4. Invalidate queries to refetch data
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
-      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
-      await refetchSpot();
-
-    } catch (err: any) {
-      console.error('Failed to update review:', err);
-      throw err; // Re-throw error to be handled by the calling component
-    } finally {
-      setImageUploading(false);
-    }
-  };
-
-  // Handler to delete a review
-  const handleDeleteReview = async (reviewId: number) => {
-    try {
-      await deleteReview(id, reviewId);
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
-      // Also invalidate userReviews to update the profile page review count
-      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
-      await refetchSpot();
-    } catch (err: any) {
-      console.error('Failed to delete review:', err);
-      throw err;
-    }
-  };
-
-  // Handler to toggle review like
-  const handleToggleReviewLike = async (reviewId: number) => {
-    if (!token) {
-      Alert.alert('Login Required', 'Please log in to like reviews.');
-      navigation.navigate('Profile');
+  const handleReviewSubmit = async (rating: number, comment: string, images: ImagePicker.ImagePickerAsset[]) => {
+    if (comment.length < 10) {
+      Alert.alert('Comment too short', 'Please provide a more detailed review (at least 10 characters).');
       return;
     }
+    if (rating === 0) {
+      Alert.alert('No rating selected', 'Please select a rating before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setImageUploading(true);
+    
+    const uploadedImageIds = [];
     try {
-      // Optimistic update for the item in the current sort order
-      queryClient.setQueryData<{ reviews: Review[]; total: number } | undefined>(
-        ['foodSpotReviews', id, sortOrder], 
-        (oldData) => {
-          if (!oldData) return undefined;
-          return {
-            ...oldData,
-            reviews: oldData.reviews.map(review => {
-              if (review.id === reviewId) {
-                return {
-                  ...review,
-                  is_liked: !review.is_liked,
-                  likes_count: review.is_liked ? (review.likes_count || 1) - 1 : (review.likes_count || 0) + 1,
-                };
-              }
-              return review;
-            }),
-          };
+      for (const image of images) {
+        const uploadedImage = await uploadImage(image.uri);
+        if (uploadedImage.data?.id) {
+          uploadedImageIds.push(uploadedImage.data.id);
         }
-      );
+      }
+    } catch (error) {
+      Alert.alert('Image Upload Failed', 'Could not upload images. Please try again.');
+      setImageUploading(false);
+      setIsSubmitting(false);
+      return;
+    }
+    
+    setImageUploading(false);
 
-      const response = await toggleReviewLike(reviewId);
-      const updatedReviewData = response.data?.review; 
+    const reviewData = {
+      rating,
+      comment,
+      image_ids: uploadedImageIds,
+    };
 
-      // After the API call, update the cache with the authoritative data from the server for the current sort order
-      queryClient.setQueryData<{ reviews: Review[]; total: number } | undefined>(
-        ['foodSpotReviews', id, sortOrder], 
-        (oldData) => {
-          if (!oldData) return undefined;
-          return {
-            ...oldData,
-            reviews: oldData.reviews.map(review => {
-              if (review.id === reviewId) {
-                if (updatedReviewData) {
-                  return {
-                    ...review,
-                    ...updatedReviewData, 
-                    is_liked: updatedReviewData.is_liked ?? review.is_liked, // Fallback to optimistic
-                    likes_count: updatedReviewData.likes_count ?? review.likes_count // Fallback to optimistic
-                  };
-                }
-                return review; 
-              }
-              return review;
-            }),
-          };
+    reviewMutation.mutate({ reviewData });
+  };
+
+  const handleReviewUpdate = async (reviewId: number, data: { rating?: number; comment?: string; newImages?: ImagePicker.ImagePickerAsset[]; deletedImageIds?: number[] }) => {
+    if (data.comment && data.comment.length < 10) {
+      Alert.alert('Comment too short', 'Please provide a more detailed review (at least 10 characters).');
+      return;
+    }
+    if (data.rating === 0) {
+      Alert.alert('No rating selected', 'Please select a rating before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setImageUploading(true);
+
+    const uploadedImageIds = [];
+    try {
+      if (data.newImages) {
+        for (const image of data.newImages) {
+          const uploadedImage = await uploadImage(image.uri);
+          if (uploadedImage.data?.id) {
+            uploadedImageIds.push(uploadedImage.data.id);
+          }
         }
-      );
+      }
+    } catch (error) {
+      Alert.alert('Image Upload Failed', 'Could not upload new images. Please try again.');
+      setImageUploading(false);
+      setIsSubmitting(false);
+      return;
+    }
 
-      // Invalidate both sort orders to ensure fresh data and correct sorting for both.
-      // This is simpler and more robust than trying to conditionally update/invalidate only one.
-      // When the user switches sort order, they will get fresh, correctly sorted data.
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
-      await queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
+    setImageUploading(false);
+
+    const existingImages = userReview?.images
+      .filter((img: { id: number; url: string; }) => !data.deletedImageIds?.includes(img.id))
+      .map((img: { id: number; url: string; }) => getFullImageUrl(img));
+
+    const reviewData = {
+      rating: data.rating,
+      comment: data.comment,
+      image_ids: uploadedImageIds,
+      existing_images: existingImages,
+    };
+
+    reviewMutation.mutate({ reviewData, reviewId });
+  };
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: (reviewId: number) => deleteReview(id, reviewId),
+    onSuccess: () => {
+      Alert.alert('Success', 'Your review has been deleted.');
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
+      queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'An unexpected error occurred.';
+      Alert.alert('Error', `Failed to delete review: ${errorMessage}`);
+    },
+  });
+
+  const handleReviewDeleted = (reviewId: number) => {
+    Alert.alert(
+      'Confirm Deletion',
+      'Are you sure you want to delete your review?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          onPress: () => deleteReviewMutation.mutate(reviewId),
+          style: 'destructive' 
+        },
+      ]
+    );
+  };
+
+  const toggleLikeMutation = useMutation({
+    mutationFn: ({ reviewId, isLiked }: { reviewId: number, isLiked: boolean }) => {
+      return toggleReviewLike(reviewId);
+    },
+    onMutate: async ({ reviewId, isLiked }) => {
+      // Optimistically update the main reviews list
+      await queryClient.cancelQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
+      const previousReviewsData = queryClient.getQueryData<{ reviews: Review[]; total: number }>(['foodSpotReviews', id, sortOrder]);
+      if (previousReviewsData) {
+        const newReviews = previousReviewsData.reviews.map(r => {
+          if (r.id === reviewId) {
+            return {
+              ...r,
+              is_liked: !isLiked,
+              likes_count: isLiked ? (r.likes_count ?? 1) - 1 : (r.likes_count ?? 0) + 1,
+            };
+          }
+          return r;
+        });
+        queryClient.setQueryData(['foodSpotReviews', id, sortOrder], { ...previousReviewsData, reviews: newReviews });
+      }
+
+      // Optimistically update the user's own review query
+      await queryClient.cancelQueries({ queryKey: ['userReview', id, user?.id] });
+      const previousUserReview = queryClient.getQueryData<Review>(['userReview', id, user?.id]);
+      if (previousUserReview && previousUserReview.id === reviewId) {
+        queryClient.setQueryData<Review>(['userReview', id, user?.id], {
+          ...previousUserReview,
+          is_liked: !isLiked,
+          likes_count: isLiked ? (previousUserReview.likes_count ?? 1) - 1 : (previousUserReview.likes_count ?? 0) + 1,
+        });
+      }
       
-      // Also invalidate user-specific reviews if they show like counts/status
-      await queryClient.invalidateQueries({ queryKey: ['userReviews'] });
-
-    } catch (err: any) {
+      return { previousReviewsData, previousUserReview };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousReviewsData) {
+        queryClient.setQueryData(['foodSpotReviews', id, sortOrder], context.previousReviewsData);
+      }
+      if (context?.previousUserReview) {
+        queryClient.setQueryData(['userReview', id, user?.id], context.previousUserReview);
+      }
       Alert.alert('Error', 'Failed to update like status.');
-      console.error('Failed to toggle review like:', err);
-      // Revert optimistic update on error by invalidating all relevant review queries
-      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'liked'] });
-      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, 'recent'] });
-      queryClient.invalidateQueries({ queryKey: ['userReviews'] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id, sortOrder] });
+      queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
+    },
+  });
+
+  const handleToggleLike = (reviewId: number, isLiked: boolean) => {
+    toggleLikeMutation.mutate({ reviewId, isLiked });
+  };
+
+  const handleImageDelete = async (imageId: number) => {
+    try {
+      await deleteImage(imageId);
+      Alert.alert('Success', 'Image deleted successfully.');
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['spotImages', id] });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete image.');
     }
   };
 
+  const handleViewAllImages = () => {
+    if (foodSpot) {
+      (navigation.navigate as any)('Gallery', { foodSpotId: foodSpot.id });
+    }
+  };
 
-  // Loading state
-  if (isLoadingSpot) {
+  useEffect(() => {
+    if ((route.params as any)?.scrollToReviews && scrollViewRef.current) {
+      const yOffset = 500; // Approximate position of reviews section
+      scrollViewRef.current.scrollTo({ y: yOffset, animated: true });
+    }
+  }, [(route.params as any)?.scrollToReviews, userHasReview, foodSpot, reviewsResult]);
+
+  if (isLoadingSpot && !foodSpot) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
@@ -536,32 +558,33 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
             {/* Reviews Section */}
             <Animated.View entering={FadeInUp.duration(500).delay(320).damping(18)} style={styles.section}>
               <Text style={styles.sectionTitle}>Reviews</Text>
-              <ReviewsSection 
-                reviews={reviews}
-                isLoading={isLoadingReviews}
-                userId={user?.id}
-                onUpdateReview={handleUpdateReview}
-                onDeleteReview={handleDeleteReview}
-                onToggleLike={handleToggleReviewLike}
-                currentSortOrder={sortOrder}
-                onSortOrderChange={setSortOrder}
+              <ReviewsSection
+                reviews={otherReviews}
                 totalReviewCount={totalReviewCount}
+                isLoading={isLoadingReviews && !isFetchingReviews}
+                isRefetching={isFetchingReviews}
+                onSortChange={setSortOrder}
+                sortOrder={sortOrder}
+                userId={user?.id}
+                onToggleLike={handleToggleLike}
               />
             </Animated.View>
 
             {/* Leave Your Review section - only show if user doesn't have a review yet */}
-            {!userHasReview && (
-              <Animated.View entering={FadeInUp.duration(500).delay(400).damping(18)} style={styles.section}>
-                <Text style={styles.sectionTitle}>Leave Your Review</Text>
-                <ReviewForm
-                  isLoggedIn={!!token}
-                  isSubmitting={isSubmitting}
-                  imageUploading={imageUploading}
-                  onSubmit={handleSubmitReview}
-                  onNavigateToLogin={() => navigation.navigate('Profile')}
-                />
-              </Animated.View>
-            )}
+            <Animated.View entering={FadeInUp.duration(500).delay(400).damping(18)} style={styles.section}>
+              <UserReviewCard
+                userReview={userReview}
+                isLoading={isLoadingUserReview}
+                isLoggedIn={!!token}
+                isSubmitting={isSubmitting}
+                imageUploading={imageUploading}
+                onSubmit={handleReviewSubmit}
+                onUpdate={handleReviewUpdate}
+                onDelete={handleReviewDeleted}
+                onToggleLike={handleToggleLike}
+                onNavigateToLogin={() => navigation.navigate('Profile')}
+              />
+            </Animated.View>
           </View>
         </ScrollView>
         {user?.role === 'spot_owner' && user?.id === (foodSpot?.user?.id || foodSpot?.user_id || foodSpot?.owner_id) && (

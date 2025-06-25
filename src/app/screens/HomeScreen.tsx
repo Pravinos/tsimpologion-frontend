@@ -60,7 +60,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>(''); // Added price sort state
 
   // Query for food spots using the custom hook
-  const { data: currentData = [], isLoading, isError, isFetching, refetch } = useFoodSpots(listType);
+  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots(listType);
 
   // Dynamically extract unique categories from the current list
   const categories = useMemo(() => {
@@ -69,11 +69,6 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
       if (spot.category) set.add(spot.category);
     });
     return Array.from(set).sort();
-  }, [currentData]);
-
-  // Extract food spot names for suggestions
-  const foodSpotNames = useMemo(() => {
-    return currentData.map((spot: FoodSpot) => spot.name).filter(Boolean);
   }, [currentData]);
 
   // Filter and sort food spots based on search, category, price range, and sort direction
@@ -128,15 +123,6 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     setListType(value as ListType);
   }, []);
 
-  // Handle suggestion selection from SearchBar
-  const handleSuggestionPress = (suggestion: string, type: 'name' | 'category' | 'recent') => {
-    if (type === 'category') {
-      setSelectedCategory(suggestion);
-    } else {
-      setSearchText(suggestion);
-    }
-  };
-
   // Show loading state
   if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
     return (
@@ -153,7 +139,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <CustomStatusBar backgroundColor={colors.white} />
-        <View style={[styles.container, { zIndex: 20 }]}> {/* Add zIndex to container for dropdown visibility */}
+        <View style={styles.container}>
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>
               <Text style={styles.welcome}>
@@ -177,9 +163,6 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             searchText={searchText}
             setSearchText={setSearchText}
             onFilterPress={() => setFilterModalVisible(true)}
-            foodSpotNames={foodSpotNames}
-            categories={categories}
-            onSuggestionPress={handleSuggestionPress}
           />
           <View style={styles.listTypeSelectorContainer}>
             <ListTypeSelector

@@ -17,3 +17,5 @@ export async function compressImage(uri, maxWidth = 1200, maxHeight = 1200, qual
   );
   return manipResult;
 }
+
+export default {};

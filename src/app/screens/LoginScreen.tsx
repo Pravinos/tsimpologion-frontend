@@ -1,7 +1,6 @@
-import React, { useState, useReducer } from 'react';
+import React, { useState, useReducer, useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,13 +8,17 @@ import {
   Image,
   Text,
   TouchableOpacity,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import colors from '@/app/styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import AuthInput from '@/app/components/UI/AuthInput';
-import { CustomStatusBar } from '@/app/components/UI';
+import { CustomStatusBar, AnimatedAuthButton } from '@/app/components/UI';
+import * as Haptics from 'expo-haptics';
+import { fadeIn, slideIn, parallelAnimations } from '@/app/utils/animationUtils';
 
 interface LoginScreenProps {
   navigation: any;
@@ -70,6 +73,43 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [apiError, setApiError] = useState<string | null>(null);
   const { login } = useAuth();
 
+  // Animation values
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoTranslateY = useRef(new Animated.Value(-50)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(30)).current;
+  const errorOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Start animations when component mounts
+  useEffect(() => {
+    Animated.sequence([
+      // Logo animation
+      parallelAnimations([
+        fadeIn(logoOpacity, 1, 800, 300),
+        slideIn(logoTranslateY, -50, 0, 800, 300)
+      ]),
+      // Form animation
+      parallelAnimations([
+        fadeIn(formOpacity, 1, 700, 100),
+        slideIn(formTranslateY, 30, 0, 700, 100)
+      ])
+    ]).start();
+  }, []);
+
+  // Error animation
+  useEffect(() => {
+    if (apiError) {
+      errorOpacity.setValue(0);
+      Animated.timing(errorOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      // Provide haptic feedback for error
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, [apiError]);
+
   const handleInputChange = (field: keyof FormState['values'], value: string) => {
     dispatch({ type: 'UPDATE_FIELD', field, value });
   };
@@ -94,8 +134,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const handleLogin = async () => {
     setApiError(null);
     if (!validateForm()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+    
+    // Success haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     setIsLoading(true);
     try {
       await login(formState.values);
@@ -108,6 +153,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  const navigateToRegister = () => {
+    // Provide haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Register');
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <CustomStatusBar backgroundColor={colors.white} />
@@ -115,32 +166,57 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.logoContainer}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View 
+            style={[
+              styles.logoContainer, 
+              { 
+                opacity: logoOpacity,
+                transform: [{ translateY: logoTranslateY }]
+              }
+            ]}
+          >
             <Image
               source={require('@/assets/images/tsimpologo.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
             <Text style={styles.appName}>Tsimpologion</Text>
-            <Text style={styles.tagline}>Find Your Dish, Wherever You Are!</Text>
-          </View>
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>Welcome!</Text>
+            <Text style={styles.tagline}>Find your comfort food, wherever you are!</Text>
+          </Animated.View>
+          
+          <Animated.View 
+            style={[
+              styles.formContainer, 
+              { 
+                opacity: formOpacity,
+                transform: [{ translateY: formTranslateY }]
+              }
+            ]}
+          >
+            <Text style={styles.title}>Welcome Back!</Text>
+            
             {apiError && (
-              <View style={styles.errorBox}>
+              <Animated.View style={[styles.errorBox, { opacity: errorOpacity }]}>
                 <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
                 <Text style={styles.errorText}>{apiError}</Text>
-              </View>
+              </Animated.View>
             )}
+            
             <AuthInput
               icon="mail"
-              placeholder="Email"
+              placeholder="Email Address"
               value={formState.values.email}
               onChangeText={(value) => handleInputChange('email', value)}
               editable={!isLoading}
               error={formState.errors.email}
+              delay={300}
             />
+            
             <AuthInput
               icon="lock"
               placeholder="Password"
@@ -152,27 +228,38 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               showValue={showPassword}
               editable={!isLoading}
               error={formState.errors.password}
+              delay={400}
             />
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+            
+            <AnimatedAuthButton
+              title="Sign In"
               onPress={handleLogin}
+              isLoading={isLoading}
               disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={styles.buttonText}>Login</Text>
-              )}
-            </TouchableOpacity>
+              icon="log-in"
+              delay={500}
+            />
+            
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading} style={styles.registerLinkContainer}>
-                <Feather name="user-plus" size={16} color={isLoading ? colors.mediumGray : colors.primary} style={{ marginRight: 2 }} />
-                <Text style={[styles.registerLink, isLoading && styles.linkDisabled]}>Register</Text>
+              <TouchableOpacity 
+                onPress={navigateToRegister} 
+                disabled={isLoading} 
+                style={styles.registerLinkContainer}
+                activeOpacity={0.7}
+              >
+                <Feather 
+                  name="user-plus" 
+                  size={16} 
+                  color={isLoading ? colors.mediumGray : colors.primary} 
+                  style={{ marginRight: 2 }} 
+                />
+                <Text style={[styles.registerLink, isLoading && styles.linkDisabled]}>
+                  Register Now
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -189,60 +276,41 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
-    justifyContent: 'center',  },
+    padding: 24,
+    justifyContent: 'center',
+  },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,  },
+    marginBottom: 40,
+  },
   appName: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: colors.primary,
-    marginTop: 10,
+    marginTop: 12,
   },
   tagline: {
     fontSize: 16,
     color: colors.darkGray,
-    marginTop: 5,
+    marginTop: 6,
+    textAlign: 'center',
   },
   formContainer: {
     backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: colors.black,
     marginBottom: 20,
     textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 4,
-    elevation: 2,
-    transform: [{ scale: 1 }],
-  },
-  buttonDisabled: {
-    backgroundColor: colors.mediumGray,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   errorBox: {
     flexDirection: 'row',
@@ -250,10 +318,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff6f6',
     borderColor: colors.error,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 10,
-    marginTop: -10,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
   },
   errorText: {
     color: colors.error,
@@ -271,6 +338,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 2,
+    padding: 4,
   },
   registerText: {
     color: colors.darkGray,
@@ -282,20 +350,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   linkDisabled: {
-    color: colors.mediumGray,  },
+    color: colors.mediumGray,
+  },
   logoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 24,
+    width: 120,
+    height: 120,
+    borderRadius: 30,
     backgroundColor: colors.lightGray,
     marginBottom: 6,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
 });
-
 
 export default LoginScreen;

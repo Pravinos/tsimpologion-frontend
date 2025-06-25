@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   StyleSheet,
   View,
   TextInput,
   TouchableOpacity,
-  Text
+  Text,
+  Animated,
+  Easing
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
@@ -21,6 +23,7 @@ interface AuthInputProps {
   editable?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
+  delay?: number;
 }
 
 const AuthInput: React.FC<AuthInputProps> = ({
@@ -35,37 +38,74 @@ const AuthInput: React.FC<AuthInputProps> = ({
   editable = true,
   autoCapitalize = 'none',
   error,
-}) => (
-  <View style={styles.container}>
-    <View style={[styles.inputContainer, !!error && styles.inputContainerError]}>
-      <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry && !showValue}
-        autoCapitalize={autoCapitalize}
-        editable={editable}
-        placeholderTextColor={colors.mediumGray}
-      />
-      {showToggle && onToggle && (
-        <TouchableOpacity
-          onPress={onToggle}
-          style={styles.eyeIcon}
-          disabled={!editable}
-        >
-          <Feather
-            name={showValue ? 'eye-off' : 'eye'}
-            size={20}
-            color={colors.darkGray}
-          />
-        </TouchableOpacity>
-      )}
-    </View>
-    {error ? <Text style={styles.errorText}>{error}</Text> : null}
-  </View>
-);
+  delay = 0,
+}) => {
+  // Animation values
+  const translateX = new Animated.Value(-20);
+  const opacity = new Animated.Value(0);
+  
+  useEffect(() => {
+    // Start the animations after a delay
+    const animationTimeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(translateX, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+    
+    return () => clearTimeout(animationTimeout);
+  }, []);
+  
+  return (
+    <Animated.View 
+      style={[
+        styles.container, 
+        { 
+          transform: [{ translateX }],
+          opacity 
+        }
+      ]}
+    >
+      <View style={[styles.inputContainer, !!error && styles.inputContainerError]}>
+        <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry && !showValue}
+          autoCapitalize={autoCapitalize}
+          editable={editable}
+          placeholderTextColor={colors.mediumGray}
+        />
+        {showToggle && onToggle && (
+          <TouchableOpacity
+            onPress={onToggle}
+            style={styles.eyeIcon}
+            disabled={!editable}
+          >
+            <Feather
+              name={showValue ? 'eye-off' : 'eye'}
+              size={20}
+              color={colors.darkGray}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </Animated.View>
+  );
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -76,12 +116,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.mediumGray,
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        height: 50,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 52,
+        backgroundColor: colors.white,
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     inputContainerError: {
         borderColor: colors.error,
+        borderWidth: 1.5,
     },
     inputIcon: {
         marginRight: 10,

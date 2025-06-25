@@ -7,6 +7,8 @@ export { default as ImageCarousel } from './ImageCarousel';
 export { default as BusinessHours } from './BusinessHours';
 export { default as FocusedStatusBar } from './FocusedStatusBar';
 export { default as CustomStatusBar } from './CustomStatusBar';
+export { default as ModernButton } from './ModernButton';
+export { default as AnimatedAuthButton } from './AnimatedAuthButton';
 
 // Create a React component as the default export
 import React from 'react';

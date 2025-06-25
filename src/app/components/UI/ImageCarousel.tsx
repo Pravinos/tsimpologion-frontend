@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StyleProp, ViewStyle, FlatList } from 'react-native';
+import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StyleProp, ViewStyle, FlatList, Platform, SafeAreaView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import colors from '../../styles/colors';
 import Animated, { FadeIn, FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import ImageViewing from 'react-native-image-viewing';
 
 interface ImageCarouselProps {
   images: any[]; // Can be string URLs or image objects with a url/uri property
@@ -186,6 +187,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
   // Open image
   const openImage = useCallback((img: any) => {
+    if (Platform.OS === 'android') return; // Disable preview for Android
     const idx = images.findIndex(i => getImageUrl(i) === getImageUrl(img));
     setModalIndex(idx >= 0 ? idx : 0);
     setSelectedImage(img);
@@ -251,101 +253,107 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   );
 
   // Render modal content
-  const renderModal = () => (
-    <Modal
-      visible={modalVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={closeModal}
-    >
-      <View style={styles.modalOverlay} onLayout={handleModalOverlayLayout}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ 
-            width: modalMaxWidth, 
-            height: modalMaxHeight, 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            backgroundColor: 'transparent', 
-            position: 'relative' 
-          }}>
-            {/* X button */}
-            <TouchableOpacity
-              style={[
-                styles.closeButtonModernFixed,
-                {
-                  position: 'absolute',
-                  marginLeft: -22, 
-                  zIndex: 20,
-                  backgroundColor: colors.white,
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.12,
-                  shadowRadius: 4,
-                  elevation: 2,
-                  borderWidth: 1,
-                  borderColor: colors.lightGray,
-                },
-              ]}
-              onPress={closeModal}
-            >
-              <Feather name="x" size={24} color={colors.darkGray} />
-            </TouchableOpacity>
-            
-            {/* Image gallery */}
-            <FlatList
-              ref={modalFlatListRef}
-              data={images}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(_, idx) => idx.toString()}
-              getItemLayout={(_, idx) => ({ 
-                length: modalMaxWidth, 
-                offset: modalMaxWidth * idx, 
-                index: idx 
-              })}
-              onMomentumScrollEnd={handleModalScroll}
-              renderItem={({ item }) => (
-                <View
-                  style={{
-                    width: modalMaxWidth,
-                    height: modalMaxHeight,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 18,
-                    overflow: 'hidden',
-                    backgroundColor: 'transparent',
-                  }}
+  const renderModal = () => {
+    if (Platform.OS === 'ios') {
+      // iOS: keep existing modal logic
+      return (
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeModal}
+        >
+          <View style={styles.modalOverlay} onLayout={handleModalOverlayLayout}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ 
+                width: modalMaxWidth, 
+                height: modalMaxHeight, 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                backgroundColor: 'transparent', 
+                position: 'relative' 
+              }}>
+                {/* X button */}
+                <TouchableOpacity
+                  style={[
+                    styles.closeButtonModernFixed,
+                    {
+                      position: 'absolute',
+                      marginLeft: -22, 
+                      zIndex: 20,
+                      backgroundColor: colors.white,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: '#000',
+                      shadowOpacity: 0.12,
+                      shadowRadius: 4,
+                      elevation: 2,
+                      borderWidth: 1,
+                      borderColor: colors.lightGray,
+                    },
+                  ]}
+                  onPress={closeModal}
                 >
-                  <Image
-                    source={{ uri: getImageUrl(item) }}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="contain"
-                    onLoad={() => setImageLoaded(true)}
-                  />
-                </View>
-              )}
-              extraData={imageLoaded}
-            />
-            
-            {/* Modal indicator dots */}
-            <View style={styles.dotsRowModal}>
-              {images.map((_, idx) => (
-                <View
-                  key={idx}
-                  style={[styles.dot, modalIndex === idx && styles.dotActive]}
+                  <Feather name="x" size={24} color={colors.darkGray} />
+                </TouchableOpacity>
+                {/* Image gallery */}
+                <FlatList
+                  ref={modalFlatListRef}
+                  data={images}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(_, idx) => idx.toString()}
+                  getItemLayout={(_, idx) => ({ 
+                    length: modalMaxWidth, 
+                    offset: modalMaxWidth * idx, 
+                    index: idx 
+                  })}
+                  onMomentumScrollEnd={handleModalScroll}
+                  renderItem={({ item }) => (
+                    <View
+                      style={{
+                        width: modalMaxWidth,
+                        height: modalMaxHeight,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 18,
+                        overflow: 'hidden',
+                        backgroundColor: 'transparent',
+                      }}
+                    >
+                      <Image
+                        source={{ uri: getImageUrl(item) }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="contain"
+                        onLoad={() => setImageLoaded(true)}
+                      />
+                    </View>
+                  )}
+                  extraData={imageLoaded}
                 />
-              ))}
+                {/* Modal indicator dots */}
+                <View style={styles.dotsRowModal}>
+                  {images.map((_, idx) => (
+                    <View
+                      key={idx}
+                      style={[styles.dot, modalIndex === idx && styles.dotActive]}
+                    />
+                  ))}
+                </View>
+              </View>
             </View>
           </View>
-        </View>
-      </View>
-    </Modal>
-  );
+        </Modal>
+      );
+    } else {
+      // Android: preview disabled
+      return null;
+    }
+  };
 
   // Main content of the component
   const content = (

@@ -3,17 +3,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { ScrollView } from 'react-native';
 import {
-  StyleSheet,
   View,
   Text,
-  TouchableOpacity,
-  ActivityIndicator,
+  StyleSheet,
   Alert,
-  KeyboardAvoidingView,
-  Platform
+  Share,
+  TouchableOpacity,
+  Linking,
+  Platform,
+  ActivityIndicator,
+  KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 // Components
@@ -25,8 +28,9 @@ import {
 import { 
   FoodSpotHeader, 
   FoodSpotDetailsSection, 
-  FoodSpotAboutSection, 
-  FoodSpotSocialLinksSection,
+  FoodSpotAboutSection,
+  FoodSpotBusinessHoursSection,
+  FoodSpotSocialLinksSection
 } from '@/app/components/FoodSpot';
 import { ImageCarousel, BusinessHours, CustomStatusBar } from '@/app/components/UI';
 
@@ -36,31 +40,36 @@ import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tansta
 import { getFullImageUrl } from '@/app/utils/getFullImageUrl';
 import { useBusinessHours } from '@/app/hooks/useBusinessHours';
 import { parseSocialLinks } from '@/app/utils/parseSocialLinks';
+import { uploadMultipleImages } from '@/app/utils/uploadUtils';
+import { uploadReviewImages, handleReviewImageUpdates } from '@/app/utils/reviewUtils';
 
-// API services
-import { 
-  createReview, 
-  updateReview, 
-  deleteReview, 
-  getFoodSpot, 
-  getReviews, 
-  uploadImage, 
-  addFavourite, 
-  removeFavourite, 
-  getFavourites,
+// API client
+import {
+  getFoodSpot,
+  getReviews,
   toggleReviewLike,
+  addFavourite,
+  removeFavourite,
+  createReview,
+  updateReview,
+  deleteReview,
   deleteImage,
-  viewAllImages
+  getFavourites
 } from '@/services/ApiClient';
 
-// Types and styles
-import { FoodSpot, Review, User, ScreenProps } from '@/app/types/appTypes';
+// Types
+import { ScreenProps, Review, FoodSpot } from '@/app/types/appTypes';
 import colors from '@/app/styles/colors';
 
-// Type for the route parameters
+// Define FoodSpotDetailParams interface
 interface FoodSpotDetailParams {
   foodSpot: FoodSpot;
+  id: number;
 }
+
+// Define review sort orders
+const SORT_RECENT = 'recent';
+const SORT_LIKED = 'liked';
 
 const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   if (!route) return null; // Add a guard for the route
@@ -241,16 +250,50 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   const reviewMutation = useMutation({
     mutationFn: async ({ reviewData, reviewId }: { reviewData: any, reviewId?: number }) => {
       setIsSubmitting(true);
+      
+      // Extract image data from reviewData before sending to API
+      const { newImages, deletedImageIds, ...reviewDataForApi } = reviewData;
+      
       if (reviewId) {
-        return updateReview(id, reviewId, reviewData);
+        return updateReview(id, reviewId, reviewDataForApi);
       } else {
-        return createReview(id, reviewData);
+        return createReview(id, reviewDataForApi);
       }
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
+      // Get the review ID from the response
+      const reviewId = data.data?.id || data.data?.data?.id;
+      
+      // Handle image updates if there are any and we have a reviewId
+      if (reviewId) {
+        try {
+          setImageUploading(true);
+          
+          // For updates, handle both image uploads and deletions
+          if (variables.reviewId) {
+            await handleReviewImageUpdates({
+              reviewId: variables.reviewId,
+              newImages: variables.reviewData.newImages || [],
+              deletedImageIds: variables.reviewData.deletedImageIds || []
+            });
+          } 
+          // For new reviews, just upload new images
+          else if (variables.reviewData.newImages && variables.reviewData.newImages.length > 0) {
+            await uploadReviewImages(variables.reviewData.newImages, reviewId);
+          }
+        } catch (error) {
+          console.error('Error handling review images:', error);
+          Alert.alert('Warning', 'Your review was saved, but there was an issue with some images.');
+        } finally {
+          setImageUploading(false);
+        }
+      }
+      
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['foodSpotReviews', id] });
       queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['foodSpot', id] });
+      queryClient.invalidateQueries({ queryKey: ['spotImages', id] });
       refetchSpot();
     },
     onError: (error: any) => {
@@ -272,36 +315,22 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
       return;
     }
 
-    setIsSubmitting(true);
-    setImageUploading(true);
-    
-    const uploadedImageIds = [];
-    try {
-      for (const image of images) {
-        const uploadedImage = await uploadImage(image.uri);
-        if (uploadedImage.data?.id) {
-          uploadedImageIds.push(uploadedImage.data.id);
-        }
-      }
-    } catch (error) {
-      Alert.alert('Image Upload Failed', 'Could not upload images. Please try again.');
-      setImageUploading(false);
-      setIsSubmitting(false);
-      return;
-    }
-    
-    setImageUploading(false);
-
     const reviewData = {
       rating,
       comment,
-      image_ids: uploadedImageIds,
+      // Include selected images for upload after review creation
+      newImages: images,
     };
 
     reviewMutation.mutate({ reviewData });
   };
 
-  const handleReviewUpdate = async (reviewId: number, data: { rating?: number; comment?: string; newImages?: ImagePicker.ImagePickerAsset[]; deletedImageIds?: number[] }) => {
+  const handleReviewUpdate = async (reviewId: number, data: { 
+    rating?: number; 
+    comment?: string; 
+    newImages?: ImagePicker.ImagePickerAsset[];
+    deletedImageIds?: number[];
+  }) => {
     if (data.comment && data.comment.length < 10) {
       Alert.alert('Comment too short', 'Please provide a more detailed review (at least 10 characters).');
       return;
@@ -311,37 +340,13 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
       return;
     }
 
-    setIsSubmitting(true);
-    setImageUploading(true);
-
-    const uploadedImageIds = [];
-    try {
-      if (data.newImages) {
-        for (const image of data.newImages) {
-          const uploadedImage = await uploadImage(image.uri);
-          if (uploadedImage.data?.id) {
-            uploadedImageIds.push(uploadedImage.data.id);
-          }
-        }
-      }
-    } catch (error) {
-      Alert.alert('Image Upload Failed', 'Could not upload new images. Please try again.');
-      setImageUploading(false);
-      setIsSubmitting(false);
-      return;
-    }
-
-    setImageUploading(false);
-
-    const existingImages = userReview?.images
-      .filter((img: { id: number; url: string; }) => !data.deletedImageIds?.includes(img.id))
-      .map((img: { id: number; url: string; }) => getFullImageUrl(img));
-
+    // Prepare review data - core review data for the API call
     const reviewData = {
       rating: data.rating,
       comment: data.comment,
-      image_ids: uploadedImageIds,
-      existing_images: existingImages,
+      // Pass new images and deleted image IDs through to the mutation
+      newImages: data.newImages || [],
+      deletedImageIds: data.deletedImageIds || [],
     };
 
     reviewMutation.mutate({ reviewData, reviewId });
@@ -432,7 +437,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   const handleImageDelete = async (imageId: number) => {
     try {
-      await deleteImage(imageId);
+      await deleteImage('reviews', userReview.id, imageId);
       Alert.alert('Success', 'Image deleted successfully.');
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: ['userReview', id, user?.id] });

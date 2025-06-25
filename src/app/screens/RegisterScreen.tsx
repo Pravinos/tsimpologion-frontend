@@ -88,19 +88,39 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   
   // Start animations when component mounts
   useEffect(() => {
-    Animated.sequence([
-      // Logo animation
-      parallelAnimations([
-        fadeIn(logoOpacity, 1, 800, 300),
-        slideIn(logoTranslateY, -50, 0, 800, 300)
-      ]),
-      // Form animation
-      parallelAnimations([
-        fadeIn(formOpacity, 1, 700, 100),
-        slideIn(formTranslateY, 30, 0, 700, 100)
-      ])
-    ]).start();
-  }, []);
+    // Using simplified animations for better performance on Android
+    const animationDelay = Platform.OS === 'android' ? 100 : 50;
+    
+    // Logo animation
+    Animated.timing(logoOpacity, {
+      toValue: 1,
+      duration: 600,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    Animated.timing(logoTranslateY, {
+      toValue: 0,
+      duration: 600,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    // Form animation with delay
+    setTimeout(() => {
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      
+      Animated.timing(formTranslateY, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }, 600 + animationDelay);
+  }, [logoOpacity, logoTranslateY, formOpacity, formTranslateY]);
   
   // Error animation
   useEffect(() => {
@@ -114,7 +134,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       // Provide haptic feedback for error
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
-  }, [apiError]);
+  }, [apiError, errorOpacity]);
 
   const handleInputChange = (field: keyof FormState['values'], value: string) => {
     dispatch({ type: 'UPDATE_FIELD', field, value });
@@ -202,12 +222,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Logo section with animation */}
           <Animated.View 
             style={[
               styles.logoContainer, 
@@ -225,98 +247,101 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             <Text style={styles.appName}>Tsimpologion</Text>
           </Animated.View>
 
+          {/* Form section with animation */}
           <Animated.View 
             style={[
-              styles.formContainer, 
+              styles.formAnimationWrapper, 
               { 
                 opacity: formOpacity,
                 transform: [{ translateY: formTranslateY }]
               }
             ]}
           >
-            <Text style={styles.title}>Create Account</Text>
+            <View style={styles.formContainer}>
+              <Text style={styles.title}>Create Account</Text>
 
-            {apiError && (
-              <Animated.View style={[styles.errorBox, { opacity: errorOpacity }]}>
-                <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
-                <Text style={styles.errorText}>{apiError}</Text>
-              </Animated.View>
-            )}
+              {apiError && (
+                <Animated.View style={[styles.errorBox, { opacity: errorOpacity }]}>
+                  <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
+                  <Text style={styles.errorText}>{apiError}</Text>
+                </Animated.View>
+              )}
 
-            <AuthInput
-              icon="user"
-              placeholder="Full Name"
-              value={formState.values.name}
-              onChangeText={(value) => handleInputChange('name', value)}
-              editable={!isLoading}
-              autoCapitalize="words"
-              error={formState.errors.name}
-              delay={300}
-            />
-            
-            <AuthInput
-              icon="mail"
-              placeholder="Email Address"
-              value={formState.values.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              editable={!isLoading}
-              error={formState.errors.email}
-              delay={400}
-            />
-            
-            <AuthInput
-              icon="lock"
-              placeholder="Password (min. 8 characters)"
-              value={formState.values.password}
-              onChangeText={(value) => handleInputChange('password', value)}
-              secureTextEntry
-              showToggle
-              onToggle={() => setShowPassword((v) => !v)}
-              showValue={showPassword}
-              editable={!isLoading}
-              error={formState.errors.password}
-              delay={500}
-            />
-            
-            <AuthInput
-              icon="shield"
-              placeholder="Confirm Password"
-              value={formState.values.passwordConfirmation}
-              onChangeText={(value) => handleInputChange('passwordConfirmation', value)}
-              secureTextEntry
-              showToggle={false}
-              editable={!isLoading}
-              error={formState.errors.passwordConfirmation}
-              delay={600}
-            />
+              <AuthInput
+                icon="user"
+                placeholder="Full Name"
+                value={formState.values.name}
+                onChangeText={(value) => handleInputChange('name', value)}
+                editable={!isLoading}
+                autoCapitalize="words"
+                error={formState.errors.name}
+                delay={0} // Remove delays for smoother UX
+              />
+              
+              <AuthInput
+                icon="mail"
+                placeholder="Email Address"
+                value={formState.values.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                editable={!isLoading}
+                error={formState.errors.email}
+                delay={0} // Remove delays for smoother UX
+              />
+              
+              <AuthInput
+                icon="lock"
+                placeholder="Password (min. 8 characters)"
+                value={formState.values.password}
+                onChangeText={(value) => handleInputChange('password', value)}
+                secureTextEntry
+                showToggle
+                onToggle={() => setShowPassword((v) => !v)}
+                showValue={showPassword}
+                editable={!isLoading}
+                error={formState.errors.password}
+                delay={0} // Remove delays for smoother UX
+              />
+              
+              <AuthInput
+                icon="shield"
+                placeholder="Confirm Password"
+                value={formState.values.passwordConfirmation}
+                onChangeText={(value) => handleInputChange('passwordConfirmation', value)}
+                secureTextEntry
+                showToggle={false}
+                editable={!isLoading}
+                error={formState.errors.passwordConfirmation}
+                delay={0} // Remove delays for smoother UX
+              />
 
-            <AnimatedAuthButton
-              title="Create Account"
-              onPress={handleRegister}
-              isLoading={isLoading}
-              disabled={isLoading}
-              icon="user-plus"
-              delay={700}
-            />
-
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity 
-                onPress={navigateToLogin} 
+              <AnimatedAuthButton
+                title="Create Account"
+                onPress={handleRegister}
+                isLoading={isLoading}
                 disabled={isLoading}
-                activeOpacity={0.7}
-                style={styles.loginLinkContainer}
-              >
-                <Feather 
-                  name="log-in" 
-                  size={16} 
-                  color={isLoading ? colors.mediumGray : colors.primary} 
-                  style={{ marginRight: 4 }} 
-                />
-                <Text style={[styles.loginLink, isLoading && styles.linkDisabled]}>
-                  Sign In
-                </Text>
-              </TouchableOpacity>
+                icon="user-plus"
+                delay={0} // Remove delays for smoother UX
+              />
+              
+              <View style={styles.loginContainer}>
+                <Text style={styles.loginText}>Already have an account? </Text>
+                <TouchableOpacity 
+                  onPress={navigateToLogin} 
+                  disabled={isLoading}
+                  activeOpacity={0.7}
+                  style={styles.loginLinkContainer}
+                >
+                  <Feather 
+                    name="log-in" 
+                    size={16} 
+                    color={isLoading ? colors.mediumGray : colors.primary} 
+                    style={{ marginRight: 4 }} 
+                  />
+                  <Text style={[styles.loginLink, isLoading && styles.linkDisabled]}>
+                    Sign In
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </Animated.View>
         </ScrollView>
@@ -360,8 +385,16 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: 8,
   },
+  formAnimationWrapper: {
+    width: '100%',
+    overflow: 'visible',
+  },
+  formWrapper: {
+    width: '100%',
+    overflow: 'visible',
+  },
   formContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     shadowColor: colors.black,

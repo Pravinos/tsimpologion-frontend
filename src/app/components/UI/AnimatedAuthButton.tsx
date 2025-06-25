@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
   ActivityIndicator,
   Animated,
   Easing,
   ViewStyle,
   TextStyle,
   Pressable,
+  View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
@@ -37,13 +37,13 @@ const AnimatedAuthButton: React.FC<AnimatedAuthButtonProps> = ({
   delay = 0,
 }) => {
   // Animation values
-  const scale = new Animated.Value(1);
-  const opacity = new Animated.Value(0);
-  const translateY = new Animated.Value(20);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
 
   // Handle press animation
   const handlePressIn = () => {
-    Animated.timing(scale, {
+    Animated.timing(scaleAnim, {
       toValue: 0.97,
       duration: 100,
       useNativeDriver: true,
@@ -52,7 +52,7 @@ const AnimatedAuthButton: React.FC<AnimatedAuthButtonProps> = ({
   };
 
   const handlePressOut = () => {
-    Animated.timing(scale, {
+    Animated.timing(scaleAnim, {
       toValue: 1,
       duration: 150,
       useNativeDriver: true,
@@ -80,16 +80,12 @@ const AnimatedAuthButton: React.FC<AnimatedAuthButtonProps> = ({
     }, delay);
 
     return () => clearTimeout(animationTimeout);
-  }, []);
+  }, [delay, opacity, translateY]);
 
   // Button appearance based on variant
   const getButtonStyle = () => {
     const baseStyle = [
       styles.button,
-      {
-        transform: [{ scale }, { translateY }],
-        opacity,
-      },
       style,
     ];
 
@@ -116,43 +112,64 @@ const AnimatedAuthButton: React.FC<AnimatedAuthButtonProps> = ({
     }
   };
 
+  const contentTransform = { transform: [{ scale: scaleAnim }] };
+
+  // We split the animation from the content to prevent Android rendering issues
   return (
-    <Animated.View style={getButtonStyle()}>
-      <Pressable
-        onPress={isLoading || disabled ? undefined : onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[styles.pressableContent, (isLoading || disabled) && styles.disabled]}
-        android_ripple={{ color: 'rgba(255, 255, 255, 0.2)', borderless: false }}
-      >
-        {isLoading ? (
-          <ActivityIndicator
-            color={variant === 'outline' ? colors.primary : colors.white}
-            size="small"
-          />
-        ) : (
-          <>
-            {icon && (
-              <Feather
-                name={icon as any}
-                size={18}
-                color={variant === 'outline' ? colors.primary : colors.white}
-                style={styles.icon}
-              />
-            )}
-            <Text style={getTextStyle()}>{title}</Text>
-          </>
-        )}
-      </Pressable>
+    <Animated.View 
+      style={[
+        styles.animationWrapper,
+        {
+          opacity,
+          transform: [{ translateY }],
+        }
+      ]}
+    >
+      <View style={getButtonStyle()}>
+        <Pressable
+          onPress={isLoading || disabled ? undefined : onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          style={[
+            styles.pressableContent, 
+            (isLoading || disabled) && styles.disabled,
+          ]}
+          android_ripple={{ color: 'rgba(255, 255, 255, 0.2)', borderless: false }}
+        >
+          {isLoading ? (
+            <ActivityIndicator
+              color={variant === 'outline' ? colors.primary : colors.white}
+              size="small"
+            />
+          ) : (
+            <Animated.View style={contentTransform}>
+              <View style={styles.buttonContent}>
+                {icon && (
+                  <Feather
+                    name={icon as any}
+                    size={18}
+                    color={variant === 'outline' ? colors.primary : colors.white}
+                    style={styles.icon}
+                  />
+                )}
+                <Text style={getTextStyle()}>{title}</Text>
+              </View>
+            </Animated.View>
+          )}
+        </Pressable>
+      </View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
+  animationWrapper: {
+    width: '100%',
+    marginVertical: 8,
+  },
   button: {
     borderRadius: 12,
     height: 52,
-    marginVertical: 8,
     overflow: 'hidden',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
@@ -167,6 +184,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     paddingHorizontal: 16,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButton: {
     backgroundColor: colors.primary,

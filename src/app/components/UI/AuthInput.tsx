@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Text,
   Animated,
-  Easing
+  Easing,
+  Platform
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
@@ -41,8 +42,8 @@ const AuthInput: React.FC<AuthInputProps> = ({
   delay = 0,
 }) => {
   // Animation values
-  const translateX = new Animated.Value(-20);
-  const opacity = new Animated.Value(0);
+  const translateX = useRef(new Animated.Value(-20)).current;
+  const containerOpacity = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
     // Start the animations after a delay
@@ -54,7 +55,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
+        Animated.timing(containerOpacity, {
           toValue: 1,
           duration: 400,
           easing: Easing.out(Easing.ease),
@@ -64,90 +65,111 @@ const AuthInput: React.FC<AuthInputProps> = ({
     }, delay);
     
     return () => clearTimeout(animationTimeout);
-  }, []);
+  }, [delay, translateX, containerOpacity]);
   
   return (
     <Animated.View 
       style={[
-        styles.container, 
+        styles.animationWrapper, 
         { 
           transform: [{ translateX }],
-          opacity 
+          opacity: containerOpacity 
         }
       ]}
     >
-      <View style={[styles.inputContainer, !!error && styles.inputContainerError]}>
-        <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry && !showValue}
-          autoCapitalize={autoCapitalize}
-          editable={editable}
-          placeholderTextColor={colors.mediumGray}
-        />
-        {showToggle && onToggle && (
-          <TouchableOpacity
-            onPress={onToggle}
-            style={styles.eyeIcon}
-            disabled={!editable}
-          >
-            <Feather
-              name={showValue ? 'eye-off' : 'eye'}
-              size={20}
-              color={colors.darkGray}
-            />
-          </TouchableOpacity>
-        )}
+      <View style={styles.container}>
+        <View style={[styles.inputContainer, !!error && styles.inputContainerError]}>
+          <Feather name={icon as any} size={20} color={colors.darkGray} style={styles.inputIcon} />
+          <TextInput
+            style={[
+              styles.input,
+              Platform.OS === 'android' && styles.inputAndroid
+            ]}
+            placeholder={placeholder}
+            value={value}
+            onChangeText={onChangeText}
+            secureTextEntry={secureTextEntry && !showValue}
+            autoCapitalize={autoCapitalize}
+            editable={editable}
+            placeholderTextColor={colors.mediumGray}
+            selectionColor={colors.primary}
+            cursorColor={colors.primary}
+            keyboardAppearance="light"
+            underlineColorAndroid="transparent"
+          />
+          {showToggle && onToggle && (
+            <TouchableOpacity
+              onPress={onToggle}
+              style={styles.eyeIcon}
+              disabled={!editable}
+            >
+              <Feather
+                name={showValue ? 'eye-off' : 'eye'}
+                size={20}
+                color={colors.darkGray}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        marginBottom: 15,
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: colors.mediumGray,
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 52,
-        backgroundColor: colors.white,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    inputContainerError: {
-        borderColor: colors.error,
-        borderWidth: 1.5,
-    },
-    inputIcon: {
-        marginRight: 10,
-    },
-    input: {
-        flex: 1,
-        height: '100%',
-        fontSize: 16,
-        color: colors.black,
-    },
-    eyeIcon: {
-        padding: 5,
-    },
-    errorText: {
-        color: colors.error,
-        fontSize: 12,
-        marginTop: 5,
-        marginLeft: 5,
-    },
+  animationWrapper: {
+    width: '100%',
+  },
+  container: {
+    marginBottom: 15,
+    overflow: 'visible',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 52,
+    backgroundColor: '#FFFFFF',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  inputContainerError: {
+    borderColor: colors.error,
+    borderWidth: 1.5,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    height: '100%',
+    fontSize: 16,
+    color: '#000000',
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    textAlignVertical: 'center',
+    opacity: 1,
+  },
+  inputAndroid: {
+    fontWeight: '400',
+  },
+  eyeIcon: {
+    padding: 5,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+  },
 });
 
 export default AuthInput;

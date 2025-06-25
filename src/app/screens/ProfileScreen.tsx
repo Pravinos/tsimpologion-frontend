@@ -17,6 +17,7 @@ import colors from '../styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import { useUserProfile } from '@/app/hooks/useUserProfile';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
+import { CustomStatusBar } from '../components/UI';
 
 const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, logout } = useAuth();
@@ -43,7 +44,8 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
 
   if (isProfileLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
@@ -54,7 +56,8 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
 
   if (!token) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.notLoggedInContainer}>
           <Text style={styles.notLoggedInText}>
             Please log in to view your profile.
@@ -72,7 +75,8 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
 
   if (isProfileError) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load profile.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
@@ -101,7 +105,8 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     : 'Food Explorer';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={colors.primary} />
       <View style={{flex: 1}}>
         <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
           <View style={styles.headerShadow}>

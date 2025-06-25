@@ -20,7 +20,7 @@ import { useFoodSpots } from '@/app/hooks/useFoodSpots';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
-import { FilterModal, SearchBar, ListTypeSelector } from '../components/UI';
+import { FilterModal, SearchBar, ListTypeSelector, CustomStatusBar } from '../components/UI';
 
 // Utilities and styles
 import colors from '../styles/colors';
@@ -126,7 +126,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   // Show loading state
   if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading food spots...</Text>
@@ -136,7 +137,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   }
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.container}>
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>

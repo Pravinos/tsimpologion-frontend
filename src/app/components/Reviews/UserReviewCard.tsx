@@ -74,7 +74,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
+    color: colors.darkGray,
+    marginBottom: 15,
   },
   skeletonCard: {
     backgroundColor: colors.backgroundWarm,
@@ -82,8 +83,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.warmAccent1,
   },
   skeletonText: {
     marginTop: 10,

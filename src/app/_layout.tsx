@@ -8,12 +8,14 @@ import queryClient from '@/app/queryClient';
 import { LinearGradient } from 'expo-linear-gradient';
 import colors from '@/app/styles/colors';
 import { StyleSheet } from 'react-native';
+import FocusedStatusBar from "@/app/components/UI/FocusedStatusBar";
 
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SafeAreaProvider>
+          <FocusedStatusBar backgroundColor={colors.backgroundGradientStart} />
           <LinearGradient
             colors={[colors.backgroundGradientStart, colors.backgroundGradientEnd]}
             style={styles.gradient}

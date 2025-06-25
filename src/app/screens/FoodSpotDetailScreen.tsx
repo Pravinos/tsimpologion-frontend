@@ -28,7 +28,7 @@ import {
   FoodSpotAboutSection, 
   FoodSpotSocialLinksSection,
 } from '@/app/components/FoodSpot';
-import { ImageCarousel, BusinessHours } from '@/app/components/UI';
+import { ImageCarousel, BusinessHours, CustomStatusBar } from '@/app/components/UI';
 
 // Hooks and utilities
 import { useAuth } from '@/services/AuthProvider';
@@ -457,7 +457,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   if (isLoadingSpot && !foodSpot) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.lightGray} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading details...</Text>
@@ -469,7 +470,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   // Error state
   if (isSpotError) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.lightGray} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load food spot details.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetchSpot()}>
@@ -483,7 +485,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   // Not found state
   if (!foodSpot) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.lightGray} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Food spot not found.</Text>
         </View>
@@ -492,7 +495,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={colors.lightGray} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -547,13 +551,13 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
               </Animated.View>
             )}
             
-            <Animated.View entering={FadeInUp.duration(500).delay(240).damping(18)} style={[styles.section, styles.reviewsCard]}>
-              {allReviewImages.length > 0 && (
+            {allReviewImages.length > 0 && (
+              <Animated.View entering={FadeInUp.duration(500).delay(240).damping(18)} style={[styles.section, styles.reviewsCard]}>
                 <View style={styles.subSection}>
                   <ImageCarousel images={allReviewImages} title="Community Photos" isCard={false} />
                 </View>
-              )}
-            </Animated.View>
+              </Animated.View>
+            )}
 
             {/* Reviews Section */}
             <Animated.View entering={FadeInUp.duration(500).delay(320).damping(18)} style={styles.section}>
@@ -561,8 +565,8 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
               <ReviewsSection
                 reviews={otherReviews}
                 totalReviewCount={totalReviewCount}
-                isLoading={isLoadingReviews && !isFetchingReviews}
-                isRefetching={isFetchingReviews}
+                isLoading={isLoadingReviews}
+                isRefetching={isFetchingReviews && !isLoadingReviews}
                 onSortChange={setSortOrder}
                 sortOrder={sortOrder}
                 userId={user?.id}

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/app/styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import AuthInput from '@/app/components/UI/AuthInput';
+import { CustomStatusBar } from '@/app/components/UI';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -139,7 +140,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={colors.white} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}

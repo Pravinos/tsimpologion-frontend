@@ -80,7 +80,7 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: 18,
+    paddingTop: 12,
     minHeight: 18,
   },
   headerCard: {

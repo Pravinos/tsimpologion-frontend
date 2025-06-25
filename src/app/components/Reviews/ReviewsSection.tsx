@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Review } from '@/app/types/appTypes';
@@ -23,26 +23,14 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
   isRefetching,
   userId,
   onToggleLike,
-  sortOrder,
+  sortOrder = 'recent',
   onSortChange,
   totalReviewCount,
 }) => {
-  // Data validation
-  if (!reviews || !Array.isArray(reviews)) {
-    console.error('Invalid reviews data:', reviews);
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Error loading reviews data</Text>
-      </View>
-    );
-  }
-
-  const [showOnlyLiked, setShowOnlyLiked] = React.useState(false);
-
-  const filteredReviews = showOnlyLiked
-    ? reviews.filter((review) => review.is_liked)
-    : reviews;
-
+ 
+  const [showOnlyLiked, setShowOnlyLiked] = useState(false);
+  
+  // Define pill style constants upfront
   const pillWidth = 110;
   const pillHeight = 32;
   const pillThumbColor = colors.primary;
@@ -69,79 +57,120 @@ const ReviewsSection: React.FC<ReviewsProps> = ({
     zIndex: 0,
   }));
 
+  // Render pill toggle component
+  const renderPillToggle = (interactive = true) => (
+    <View style={[styles.pillSwitchContainer, { width: pillWidth * 2, height: pillHeight, backgroundColor: pillBgColor, position: 'relative', overflow: 'hidden' }]}> 
+      <Animated.View style={thumbStyle} />
+      <TouchableOpacity
+        style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
+        onPress={interactive ? () => onSortChange('recent') : undefined}
+        activeOpacity={0.85}
+        disabled={!interactive}
+      >
+        <Text style={[styles.pillOptionText, sortOrder === 'recent' && styles.pillOptionTextActive]}>Most Recent</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
+        onPress={interactive ? () => onSortChange('liked') : undefined}
+        activeOpacity={0.85}
+        disabled={!interactive}
+      >
+        <Text style={[styles.pillOptionText, sortOrder === 'liked' && styles.pillOptionTextActive]}>Most Liked</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Show skeleton loaders during loading
   if (isLoading) {
     return (
       <View style={styles.otherReviewsSection}>
         <View style={styles.otherReviewsHeader}>
-          <Text style={styles.reviewCountText}>Loading Reviews...</Text>
+          <Text style={styles.reviewCountText}>Reviews</Text>
+          {renderPillToggle(false)}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}>
-          {[...Array(3)].map((_, index) => <ReviewItemSkeleton key={index} />)}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
+        >
+          {[...Array(3)].map((_, index) => (
+            <View key={index} style={styles.reviewItemContainer}>
+              <ReviewItemSkeleton />
+            </View>
+          ))}
         </ScrollView>
       </View>
     );
   }
+
+  // Data validation
+  if (!reviews || !Array.isArray(reviews)) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error loading reviews data</Text>
+      </View>
+    );
+  }
+
+  // When data is loaded but empty
+  if (!isLoading && reviews.length === 0) {
+    return (
+      <View style={styles.otherReviewsSection}>
+        <View style={styles.otherReviewsHeader}>
+          <Text style={styles.reviewCountText}>0 Reviews</Text>
+          {renderPillToggle()}
+        </View>
+        <View style={styles.noReviewsContainer}>
+          <Text style={styles.noReviewsText}>
+            No reviews yet. Be the first to leave a review!
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const filteredReviews = showOnlyLiked
+    ? reviews.filter((review) => review.is_liked)
+    : reviews;
   
   return (
-    <>
-      {reviews.length > 0 ? (
-        <View style={styles.otherReviewsSection}>
-          <View style={styles.otherReviewsHeader}>
-            <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
-            <View style={[styles.pillSwitchContainer, { width: pillWidth * 2, height: pillHeight, backgroundColor: pillBgColor, position: 'relative', overflow: 'hidden' }]}> 
-              <Animated.View style={thumbStyle} />
-              <TouchableOpacity
-                style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
-                onPress={() => onSortChange('recent')}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.pillOptionText, sortOrder === 'recent' && styles.pillOptionTextActive]}>Most Recent</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pillOption, { width: pillWidth, height: pillHeight, zIndex: 1 }]}
-                onPress={() => onSortChange('liked')}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.pillOptionText, sortOrder === 'liked' && styles.pillOptionTextActive]}>Most Liked</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View style={styles.otherReviewsSection}>
+      <View style={styles.otherReviewsHeader}>
+        <Text style={styles.reviewCountText}>{totalReviewCount} {totalReviewCount === 1 ? 'Review' : 'Reviews'}</Text>
+        {renderPillToggle()}
+      </View>
 
-          <View style={isRefetching ? styles.refetchingContainer : undefined}>
-            {filteredReviews.length > 0 ? (
-              <Animated.FlatList
-                data={filteredReviews}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item, index }) => (
-                  <View style={styles.reviewItemContainer}>
-                    <ReviewItem 
-                      review={item} 
-                      onToggleLike={onToggleLike} 
-                      isLiked={item.is_liked} 
-                      likesCount={item.likes_count} 
-                      currentUserId={userId}
-                      index={index} // Pass index for staggered animation
-                    />
-                  </View>
-                )}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                initialNumToRender={3}
-                contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
-              />
-            ) : (
-              <Text style={styles.noReviewsText}>
-                {showOnlyLiked ? 'No liked reviews yet.' : 'No other reviews yet.'}
-              </Text>
+      <View style={isRefetching ? styles.refetchingContainer : undefined}>
+        {filteredReviews.length > 0 ? (
+          <Animated.FlatList
+            data={filteredReviews}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item, index }) => (
+              <View style={styles.reviewItemContainer}>
+                <ReviewItem 
+                  review={item} 
+                  onToggleLike={onToggleLike} 
+                  isLiked={item.is_liked} 
+                  likesCount={item.likes_count} 
+                  currentUserId={userId}
+                  index={index} // Pass index for staggered animation
+                />
+              </View>
             )}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            initialNumToRender={3}
+            contentContainerStyle={{ paddingVertical: 4, paddingLeft: 0, paddingRight: 12 }}
+          />
+        ) : (
+          <View style={styles.noReviewsContainer}>
+            <Text style={styles.noReviewsText}>
+              {showOnlyLiked ? 'No liked reviews yet.' : 'No other reviews yet.'}
+            </Text>
           </View>
-        </View>
-      ) : (
-        <Text style={styles.noReviewsText}>
-          No reviews yet. Be the first to leave a review!
-        </Text>
-      )}
-    </>
+        )}
+      </View>
+    </View>
   );
 };
 
@@ -155,7 +184,7 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
   otherReviewsSection: {
-    marginTop: 10,
+    paddingHorizontal: 2,
   },
   otherReviewsHeader: {
     flexDirection: 'row',
@@ -170,6 +199,12 @@ const styles = StyleSheet.create({
   reviewItemContainer: {
     width: 280,
     marginRight: 16,
+  },
+  noReviewsContainer: {
+    minHeight: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
   noReviewsText: {
     textAlign: 'center',

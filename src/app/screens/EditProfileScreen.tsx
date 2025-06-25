@@ -22,6 +22,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import ModernButton from '../components/UI/ModernButton';
+import { CustomStatusBar } from '../components/UI';
 
 interface FormErrors {
   name?: string;
@@ -260,7 +261,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
@@ -270,7 +272,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={colors.primary} />
       <View style={{flex: 1}}>
         <KeyboardAvoidingView
           style={{flex: 1}}

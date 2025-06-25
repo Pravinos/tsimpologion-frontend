@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import colors from '@/app/styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import AuthInput from '@/app/components/UI/AuthInput';
+import { CustomStatusBar } from '@/app/components/UI';
 
 interface LoginScreenProps {
   navigation: any;
@@ -108,7 +109,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={colors.white} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}

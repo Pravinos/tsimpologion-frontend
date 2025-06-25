@@ -19,6 +19,7 @@ import { FoodSpot } from '../types/appTypes';
 import colors from '../styles/colors';
 import { ScreenProps } from '../types/appTypes';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
+import { CustomStatusBar } from '../components/UI';
 
 interface BusinessHour {
   id: number;
@@ -35,7 +36,8 @@ interface SocialLink {
 const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   if (!route || !route.params) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Invalid navigation state.</Text>
         </View>
@@ -265,7 +267,8 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
@@ -273,7 +276,8 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   if (isError) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <CustomStatusBar backgroundColor={colors.white} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load food spot data.</Text>
         </View>
@@ -282,7 +286,8 @@ const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <CustomStatusBar backgroundColor={'#f4f5f7'} />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
         <Text style={styles.title}>Edit Food Spot</Text>
 

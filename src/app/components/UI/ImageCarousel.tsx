@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StyleProp, ViewStyle, FlatList, Platform, SafeAreaView } from 'react-native';
+import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StyleProp, ViewStyle, FlatList, Platform, SafeAreaView, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
@@ -314,16 +314,15 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
                   })}
                   onMomentumScrollEnd={handleModalScroll}
                   renderItem={({ item }) => (
-                    <View
-                      style={{
-                        width: modalMaxWidth,
-                        height: modalMaxHeight,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 18,
-                        overflow: 'hidden',
-                        backgroundColor: 'transparent',
-                      }}
+                    <ScrollView
+                      style={{ width: modalMaxWidth, height: modalMaxHeight }}
+                      contentContainerStyle={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+                      maximumZoomScale={3}
+                      minimumZoomScale={1}
+                      showsHorizontalScrollIndicator={false}
+                      showsVerticalScrollIndicator={false}
+                      pinchGestureEnabled={true}
+                      centerContent={true}
                     >
                       <Image
                         source={{ uri: getImageUrl(item) }}
@@ -331,7 +330,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
                         resizeMode="contain"
                         onLoad={() => setImageLoaded(true)}
                       />
-                    </View>
+                    </ScrollView>
                   )}
                   extraData={imageLoaded}
                 />

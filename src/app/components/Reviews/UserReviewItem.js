@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -6,8 +6,9 @@ import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getFullImageUrl } from '../../utils/getFullImageUrl';
 import { ImageCarousel } from '../UI';
+import { compressImage } from '../../utils/imageUtils';
 
-const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, likesCount }) => {
+const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, likesCount, isSubmitting = false, imageUploading = false }) => {
 
   // Validate review object
   if (!review) {
@@ -44,7 +45,20 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   const formattedDate = review.created_at ? 
     new Date(review.created_at).toLocaleDateString() : null;
 
+  // When the parent signals the mutation is done (isSubmitting or imageUploading go from true to false), exit edit mode and reset local state
+  useEffect(() => {
+    if (isEditing && !isSubmitting && !imageUploading && !isUpdating) {
+      setIsEditing(false);
+      setNewImages([]);
+      setDeletedImageIds([]);
+    }
+  }, [isSubmitting, imageUploading, isUpdating]);
+
   const handleSave = async () => {
+    if (isSubmitting || imageUploading) {
+      Alert.alert('Please wait', 'Save is still in progress.');
+      return;
+    }
     if (editRating === 0) {
       Alert.alert('Rating Required', 'Please select a rating for your review.');
       return;
@@ -57,16 +71,13 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
 
     try {
       setIsUpdating(true);
-      // Pass new images and IDs of deleted images to the parent handler
       await onUpdate(review.id, {
         rating: editRating,
         comment: editComment.trim(),
         newImages,
         deletedImageIds,
       });
-      setIsEditing(false);
-      setNewImages([]);
-      setDeletedImageIds([]);
+      // Do not exit edit mode or reset state here; wait for mutation to finish (handled by useEffect)
     } catch (error) {
       console.error('Failed to update review:', error);
       Alert.alert('Error', 'Failed to update your review. Please try again.');
@@ -132,15 +143,19 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
       Alert.alert('Permission required', 'You need to grant permission to access the photo library.');
       return;
     }
-
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       allowsEditing: true,
       quality: 1,
     });
-
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setNewImages(prev => [...prev, result.assets[0]]);
+      try {
+        // Compress/resize before adding
+        const compressed = await compressImage(result.assets[0].uri, 1200, 1200, 0.7);
+        setNewImages(prev => [...prev, { ...result.assets[0], uri: compressed.uri }]);
+      } catch (e) {
+        Alert.alert('Error', 'Failed to compress image.');
+      }
     }
   };
 
@@ -167,8 +182,8 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
   return (
     <TouchableOpacity
       style={[styles.container, styles.userReviewContainer]}
-      onPress={() => !isEditing && setIsEditing(true)}
-      disabled={isEditing || isUpdating}
+      onPress={() => !isEditing && !isUpdating && !isSubmitting && !imageUploading && setIsEditing(true)}
+      disabled={isEditing || isUpdating || isSubmitting || imageUploading}
     >
       <View style={styles.header}>
         <View style={styles.userInfo}>
@@ -197,8 +212,9 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
               style={styles.actionButton}
               onPress={(e) => {
                 e.stopPropagation();
-                setIsEditing(true);
+                if (!isUpdating && !isSubmitting && !imageUploading) setIsEditing(true);
               }}
+              disabled={isUpdating || isSubmitting || imageUploading}
             >
               <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
             </TouchableOpacity>
@@ -221,9 +237,9 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
                 e.stopPropagation(); 
                 handleSave(); 
               }}
-              disabled={isUpdating}
+              disabled={isUpdating || isSubmitting || imageUploading}
             >
-              {isUpdating ? (
+              {(isUpdating || isSubmitting || imageUploading) ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <MaterialCommunityIcons name="check" size={16} color={colors.white} />
@@ -260,7 +276,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
             onChangeText={setEditComment}
             placeholder="Write your review..."
             multiline
-            editable={!isUpdating} // Added editable state
+            editable={!isUpdating && !isSubmitting && !imageUploading} // Added editable state
           />
           <View style={styles.photoSection}>
             <Text style={styles.photoSectionTitle}>Photos</Text>
@@ -298,10 +314,20 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
                 </View>
               ))}
               {/* Add photo button */}
-              <TouchableOpacity onPress={handleImagePick} style={styles.addPhotoButton}>
+              <TouchableOpacity
+                onPress={handleImagePick}
+                style={styles.addPhotoButton}
+                disabled={isUpdating || isSubmitting || imageUploading}
+              >
                 <MaterialCommunityIcons name="camera-plus-outline" size={30} color={colors.primary} />
               </TouchableOpacity>
             </ScrollView>
+            {imageUploading ? (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.uploadingText}>Processing image(s)...</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       ) : (
@@ -564,6 +590,16 @@ const styles = StyleSheet.create({
   likesCountText: {
     fontSize: 14,
     color: colors.darkGray,
+  },
+  uploadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  uploadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.primary,
   },
 });
 

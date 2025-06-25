@@ -56,6 +56,8 @@ export const UserReviewCard: React.FC<UserReviewCardProps> = ({
           onToggleLike={(reviewId: number) => onToggleLike(reviewId, userReview.is_liked ?? false)}
           isLiked={userReview.is_liked}
           likesCount={userReview.likes_count}
+          isSubmitting={isSubmitting}
+          imageUploading={imageUploading}
         />
       ) : (
         <ReviewForm

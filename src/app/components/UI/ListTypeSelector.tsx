@@ -31,17 +31,17 @@ const AnimatedPill: React.FC<{
   }));
 
   return (
-    <Animated.View
-      style={[
-        styles.optionButton,
-        selected ? styles.optionButtonSelected : styles.optionButtonUnselected,
-        animatedStyle,
-      ]}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={styles.touchableContainer}
     >
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.8}
-        style={styles.touchable}
+      <Animated.View
+        style={[
+          styles.optionButton,
+          selected ? styles.optionButtonSelected : styles.optionButtonUnselected,
+          animatedStyle,
+        ]}
       >
         <Text style={[
           styles.optionButtonText,
@@ -49,8 +49,8 @@ const AnimatedPill: React.FC<{
         ]}>
           {label}
         </Text>
-      </TouchableOpacity>
-    </Animated.View>
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
@@ -78,16 +78,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 12,
   },
+  touchableContainer: {
+    marginRight: 12,
+  },
   optionButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
-    marginRight: 12,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 40,
   },
   optionButtonSelected: {
     borderColor: colors.primary,
@@ -103,12 +106,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-  },
-  touchable: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    minWidth: 40,
   },
   optionButtonText: {
     color: colors.darkGray,

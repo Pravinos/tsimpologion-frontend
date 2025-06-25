@@ -20,3 +20,5 @@ export function getIdealStatusBarStyle(backgroundColor: string): StatusBarStyle 
   // Return 'dark' for light backgrounds, 'light' for dark backgrounds
   return brightness > 128 ? 'dark' : 'light';
 }
+
+export default getIdealStatusBarStyle;

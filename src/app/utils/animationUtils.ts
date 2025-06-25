@@ -118,3 +118,5 @@ export const pulseAnimation = (
     })
   ]);
 };
+
+export default {}

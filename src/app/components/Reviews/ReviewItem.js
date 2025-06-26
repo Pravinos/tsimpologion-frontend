@@ -23,7 +23,7 @@ const ReviewItem = ({ review, onToggleLike, isLiked, likesCount, currentUserId, 
 
   // Handle both object user and string user formats
   const userName = typeof review.user === 'object' ? 
-    review.user?.name || 'Unknown User' : 
+    review.user?.username || 'Unknown User' : 
     review.user || 'Unknown User';
   
   // Format date if available

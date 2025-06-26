@@ -553,7 +553,6 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
                 distance={null}
               />
               <FoodSpotSocialLinksSection social_links={socialLinks} />
-              {/* Business Hours below location, integrated, old approach */}
               {formattedHours && formattedHours.length > 0 && (
                 <View>
                   <BusinessHours

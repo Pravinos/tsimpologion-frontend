@@ -19,6 +19,50 @@ import { useUserProfile } from '@/app/hooks/useUserProfile';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { CustomStatusBar } from '../components/UI';
 
+// --- Helper Components ---
+const LoadingState = () => (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <CustomStatusBar backgroundColor={colors.white} />
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.loadingText}>Loading profile...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+const NotLoggedInState = ({ navigation }: { navigation: any }) => (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <CustomStatusBar backgroundColor={colors.white} />
+    <View style={styles.notLoggedInContainer}>
+      <Text style={styles.notLoggedInText}>
+        Please log in to view your profile.
+      </Text>
+      <TouchableOpacity 
+        style={styles.loginButton}
+        onPress={() => navigation.navigate('Auth')}
+      >
+        <Text style={styles.loginButtonText}>Log In</Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+);
+
+const ErrorState = ({ refetchProfile, handleLogout }: { refetchProfile: () => void; handleLogout: () => void }) => (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <CustomStatusBar backgroundColor={colors.white} />
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>Failed to load profile.</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={refetchProfile}>
+        <Text style={styles.retryText}>Try Again</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.error, marginTop: 10 }]} onPress={handleLogout}>
+        <Text style={styles.retryText}>Log Out</Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+);
+
+// --- Main Component ---
 const ProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, logout } = useAuth();
   const queryClient = useQueryClient();
@@ -31,7 +75,7 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     areReviewsLoading,
   } = useUserProfile();
 
-  const handleLogout = () => {
+  const handleLogout = React.useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'OK', onPress: async () => {
@@ -40,69 +84,27 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
         queryClient.invalidateQueries({ queryKey: ['userReviews'] });
       }}
     ]);
-  };
+  }, [logout, queryClient, token]);
 
-  if (isProfileLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!token) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.notLoggedInContainer}>
-          <Text style={styles.notLoggedInText}>
-            Please log in to view your profile.
-          </Text>
-          <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={() => navigation.navigate('Auth')}
-          >
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isProfileError) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load profile.</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.error, marginTop: 10 }]} onPress={handleLogout}>
-            <Text style={styles.retryText}>Log Out</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const displayName = userProfile?.name || authUser?.name || 'User';
-  const displayEmail = userProfile?.email || authUser?.email || 'No email';
-  const displayJoinDate = userProfile?.created_at 
+  // Memoized derived values
+  const displayName = React.useMemo(() => userProfile?.name || authUser?.name || 'User', [userProfile, authUser]);
+  const displayEmail = React.useMemo(() => userProfile?.email || authUser?.email || 'No email', [userProfile, authUser]);
+  const displayJoinDate = React.useMemo(() => userProfile?.created_at 
     ? new Date(userProfile.created_at).toLocaleDateString() 
-    : 'N/A';
-  const displayReviewsCount = userReviews.length || 0;
-  const displayRole = userProfile?.role 
-    ? userProfile.role === 'foodie' 
-      ? 'Foodie' 
-      : userProfile.role === 'spot_owner' 
-        ? 'Owner' 
-        : 'Administrator'
-    : 'Food Explorer';
+    : 'N/A', [userProfile]);
+  const displayReviewsCount = React.useMemo(() => userReviews.length || 0, [userReviews]);
+  const displayRole = React.useMemo(() => {
+    if (userProfile?.role) {
+      if (userProfile.role === 'foodie') return 'Foodie';
+      if (userProfile.role === 'spot_owner') return 'Owner';
+      if (userProfile.role === 'admin') return 'Administrator';
+    }
+    return 'Food Explorer';
+  }, [userProfile]);
+
+  if (isProfileLoading) return <LoadingState />;
+  if (!token) return <NotLoggedInState navigation={navigation} />;
+  if (isProfileError) return <ErrorState refetchProfile={refetchProfile} handleLogout={handleLogout} />;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>

@@ -8,7 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
  * @param {number} quality - Compression quality (0-1)
  * @returns {Promise<{ uri: string, width: number, height: number }>} - The compressed image asset
  */
-export async function compressImage(uri, maxWidth = 1200, maxHeight = 1200, quality = 0.7) {
+export async function compressImage(uri, maxWidth = 1200, maxHeight = 1200, quality = 0.85) {
   // Resize first
   const manipResult = await ImageManipulator.manipulateAsync(
     uri,

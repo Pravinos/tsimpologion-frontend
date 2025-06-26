@@ -20,9 +20,12 @@ import { useAuth } from '@/services/AuthProvider';
 import { updateUser, getCurrentUser, getToken, deleteImage } from '@/services/ApiClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
 import ModernButton from '../components/UI/ModernButton';
 import { CustomStatusBar } from '../components/UI';
+import AvatarSection from '../components/Profile/AvatarSection';
+import PersonalInfoSection from '../components/Profile/PersonalInfoSection';
+import PasswordSection from '../components/Profile/PasswordSection';
+import { uploadImage as uploadImageUtil } from '../utils/uploadUtils';
 
 interface FormErrors {
   name?: string;
@@ -41,19 +44,31 @@ interface UpdateData {
   images?: string[]; // Backend expects array, not string
 }
 
+// --- Helper Components ---
+const LoadingState = () => (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <CustomStatusBar backgroundColor={colors.white} />
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.loadingText}>Loading profile...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+// --- Main Component ---
 const EditProfileScreen = ({ navigation }: { navigation: any }) => {
   const { user: authUser, token, updateUserInContext } = useAuth();
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
-  
+
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedImage, setSelectedImage] = useState<any>(null);
-  const [pickerAsset, setPickerAsset] = useState<any>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [pickerAsset, setPickerAsset] = useState<any>(null); // Use 'any' for pickerAsset, or import the Expo type if you want strict typing
 
   // Validation states
   const [errors, setErrors] = useState<FormErrors>({});
@@ -80,49 +95,25 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
       setName(userProfile.name || '');
       setEmail(userProfile.email || '');
       if (userProfile.images && userProfile.images.length > 0) {
-        // Always store the image as a string (url or filename)
         const img = userProfile.images[0];
         setSelectedImage(typeof img === 'string' ? img : img.url || img);
       }
     }
   }, [userProfile]);
 
-  const validateForm = () => {
-    const newErrors: FormErrors = {};
+  // Memoized form values (for future extensibility)
+  const formValues = React.useMemo(() => ({
+    name,
+    email,
+    currentPassword,
+    newPassword,
+    confirmPassword,
+    selectedImage,
+    pickerAsset,
+  }), [name, email, currentPassword, newPassword, confirmPassword, selectedImage, pickerAsset]);
 
-    // Validate name
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    // Validate password fields if changing password
-    if (newPassword || confirmPassword || currentPassword) {
-      if (!currentPassword) {
-        newErrors.currentPassword = 'Current password is required to change password';
-      }
-      if (!newPassword) {
-        newErrors.newPassword = 'New password is required';
-      } else if (newPassword.length < 8) {
-        newErrors.newPassword = 'New password must be at least 8 characters';
-      }
-      if (newPassword !== confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  // When picking a new image, set as { url: localUri } for preview compatibility
-  const handlePickImage = async () => {
+  // Handlers (useCallback for performance)
+  const handlePickImage = React.useCallback(async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission required', 'Permission to access media library is required!');
@@ -136,20 +127,40 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     });
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
       const asset = pickerResult.assets[0];
-      setSelectedImage(asset.uri); // Always store as string
-      setPickerAsset(asset);
+      setSelectedImage(asset.uri);
+      // Fix type: ensure fileName is string | undefined (never null)
+      setPickerAsset({
+        uri: asset.uri,
+        fileName: asset.fileName ?? undefined,
+        mimeType: asset.mimeType ?? undefined,
+        type: asset.type ?? undefined,
+      });
     }
-  };
-  const handleSave = async () => {
-    if (!validateForm() || !userProfile) {
-      return;
+  }, []);
+
+  const validateForm = React.useCallback(() => {
+    const newErrors: FormErrors = {};
+    if (!name.trim()) newErrors.name = 'Name is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) newErrors.email = 'Email is required';
+    else if (!emailRegex.test(email)) newErrors.email = 'Please enter a valid email address';
+    if (newPassword || confirmPassword || currentPassword) {
+      if (!currentPassword) newErrors.currentPassword = 'Current password is required to change password';
+      if (!newPassword) newErrors.newPassword = 'New password is required';
+      else if (newPassword.length < 8) newErrors.newPassword = 'New password must be at least 8 characters';
+      if (newPassword !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [name, email, currentPassword, newPassword, confirmPassword]);
+
+  const handleSave = React.useCallback(async () => {
+    if (!validateForm() || !userProfile) return;
     try {
       setSaving(true);
-      let imageUrl = selectedImage;
-      // If a new image is selected and it's a local file, upload it
+      let imageUrlToSend = selectedImage;
       if (selectedImage && pickerAsset && selectedImage.startsWith('file')) {
-        // 1. Delete old image if exists
+        // Delete old image if exists
         if (userProfile.images && userProfile.images.length > 0 && userProfile.images[0].id) {
           try {
             await deleteImage('users', userProfile.id, userProfile.images[0].id);
@@ -157,49 +168,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
             console.warn('Failed to delete old profile image:', e);
           }
         }
-        // 2. Upload new image
-        const formData = new FormData();
-        let fileName = pickerAsset.fileName || pickerAsset.name;
-        let fileType = pickerAsset.mimeType || pickerAsset.type;
-        let uri = pickerAsset.uri;
-        if (!fileName) {
-          const uriParts = uri.split('/');
-          fileName = uriParts[uriParts.length - 1] || 'profile.jpg';
-        }
-        if (!fileType) {
-          if (fileName.endsWith('.png')) fileType = 'image/png';
-          else fileType = 'image/jpeg';
-        }
-        if (!fileName.match(/\.(jpg|jpeg|png)$/i)) {
-          fileName += fileType === 'image/png' ? '.png' : '.jpg';
-        }
-        // DO NOT set Content-Type header, let fetch handle it
-        // @ts-ignore: React Native FormData allows this object for file upload
-        formData.append('images[]', {
-          uri,
-          type: fileType,
-          name: fileName,
-        });
-        if (__DEV__) {
-          console.log('Uploading file:', { uri, type: fileType, name: fileName });
-        }
-        const uploadUrl = `${API_BASE_URL}/images/users/${userProfile.id}`;
-        const token = await getToken();
-        const fetchRes = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-          body: formData,
-        });
-        const uploadRes = await fetchRes.json();
-        if (__DEV__) {
-          console.log('Upload response:', uploadRes);
-        }
-        if (uploadRes.errors) {
-          throw new Error(uploadRes.message || 'Image upload failed.');
-        }
+        // Use uploadUtils.js util for upload
+        const uploadRes = await uploadImageUtil(pickerAsset, 'users', userProfile.id);
         let uploadedImageUrl;
         if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
           uploadedImageUrl = uploadRes.data.data[0];
@@ -208,8 +178,11 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
           uploadedImageUrl = uploadRes.data.images[0];
         }
-        setSelectedImage(uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl));
-        imageUrl = uploadedImageUrl;
+        setSelectedImage(
+          uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl)
+        );
+        imageUrlToSend =
+          uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl);
       }
       const updateData: UpdateData = {
         name: name.trim(),
@@ -220,9 +193,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         updateData.password = newPassword;
         updateData.password_confirmation = confirmPassword;
       }
-      // Always send images field, even if empty, to satisfy backend validation
-      if (imageUrl) {
-        updateData.images = [typeof imageUrl === 'string' ? imageUrl : imageUrl.url || imageUrl];
+      if (imageUrlToSend) {
+        updateData.images = [imageUrlToSend];
       } else {
         updateData.images = [];
       }
@@ -239,11 +211,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err: any) {
-      // Enhanced error logging for 422 and backend validation
       if (err.response) {
         console.error('Backend error:', err.response.status, err.response.data);
         if (err.response.data?.errors) {
-          // Laravel-style validation errors
           const errorDetails = Object.values(err.response.data.errors).flat().join('\n');
           Alert.alert('Validation Error', errorDetails);
         } else {
@@ -257,19 +227,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [validateForm, userProfile, selectedImage, pickerAsset, name, email, currentPassword, newPassword, confirmPassword, updateUserInContext, queryClient, token, navigation]);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (loading) return <LoadingState />;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -280,86 +240,25 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <ScrollView style={styles.content} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
-            <View style={styles.avatarSectionCard}>
-              <TouchableOpacity onPress={handlePickImage} disabled={saving} style={styles.avatarTouchable} activeOpacity={0.85}>
-                {selectedImage ? (
-                  <Image source={{ uri: getFullImageUrl(selectedImage) }} style={styles.avatar} />
-                ) : (
-                  <Feather name="user" size={60} color={colors.primary} />
-                )}
-                <View style={styles.cameraIconContainer}>
-                  <Feather name="camera" size={20} color={colors.white} />
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.avatarHint}>Tap to change photo</Text>
-            </View>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Personal Information</Text>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={[styles.input, errors.name && styles.inputError]}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Enter your name"
-                  editable={!saving}
-                />
-                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!saving}
-                />
-                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-              </View>
-            </View>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Change Password</Text>
-              <Text style={styles.sectionSubtitle}>Leave blank to keep current password</Text>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Current Password</Text>
-                <TextInput
-                  style={[styles.input, errors.currentPassword && styles.inputError]}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  placeholder="Enter current password"
-                  secureTextEntry
-                  editable={!saving}
-                />
-                {errors.currentPassword && <Text style={styles.errorText}>{errors.currentPassword}</Text>}
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>New Password</Text>
-                <TextInput
-                  style={[styles.input, errors.newPassword && styles.inputError]}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="Enter new password"
-                  secureTextEntry
-                  editable={!saving}
-                />
-                {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm New Password</Text>
-                <TextInput
-                  style={[styles.input, errors.confirmPassword && styles.inputError]}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Confirm new password"
-                  secureTextEntry
-                  editable={!saving}
-                />
-                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-              </View>
-            </View>
+            <AvatarSection selectedImage={selectedImage} onPickImage={handlePickImage} saving={saving} />
+            <PersonalInfoSection
+              name={name}
+              setName={setName}
+              email={email}
+              setEmail={setEmail}
+              errors={errors}
+              saving={saving}
+            />
+            <PasswordSection
+              currentPassword={currentPassword}
+              setCurrentPassword={setCurrentPassword}
+              newPassword={newPassword}
+              setNewPassword={setNewPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
+              errors={errors}
+              saving={saving}
+            />
           </ScrollView>
           <View style={styles.footer}>
             <ModernButton
@@ -523,7 +422,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.white, // Change to white for avatar border
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.13,

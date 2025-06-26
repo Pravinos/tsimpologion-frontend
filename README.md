@@ -4,15 +4,27 @@ A modern React Native app (built with [Expo](https://expo.dev)) for discovering 
 
 ## Features
 
-- 🔐 **User Authentication**: Register, log in, and log out securely.
-- 👤 **Profile Management**: Edit your profile, change your password, and upload an avatar.
-- 🍴 **Food Spot Discovery**: Browse, filter, and sort food spots by category and rating.
-- 🗺️ **Food Spot Details**: View address, business hours, contact info, social links, and more.
-- ⭐ **Community Reviews**: Add, edit, and delete reviews with ratings and images.
-- 🖼️ **Image Uploads**: Upload images for your profile and reviews.
-- ⚡ **Fast Data Fetching**: Powered by React Query for caching and performance.
-- 🗂️ **File-based Routing**: Easy navigation using Expo Router.
-- 🎨 **Modern UI**: Clean, responsive design with custom components.
+## Features
+
+- 🔐 **User Authentication**: Register, log in, log out, and manage authentication state securely.
+- 👤 **Profile Management**: Edit your profile, change your password, upload an avatar, and manage user details.
+- 🍴 **Food Spot Discovery**: Browse, filter, and sort food spots by category, rating, and location.
+- 🗺️ **Food Spot Details**: View address, business hours, contact info, social links, and more for each spot.
+- ⭐ **Community Reviews**: Add, edit, and delete reviews with ratings, comments, and images.
+- ❤️ **Review Likes**: Like and unlike reviews, see like counts, and sort reviews by most liked.
+- 🖼️ **Image Uploads**: Upload images for your profile, food spots, and reviews, with support for multiple images and image deletion.
+- 🕒 **Business Hours**: View and edit business hours for each food spot with a modern UI.
+- 💬 **Social Links**: Add and display social media links for food spots.
+- 📱 **Modern UI**: Clean, responsive design with custom components, skeleton loaders, and animated transitions.
+- ⚡ **Fast Data Fetching**: Powered by React Query for caching, optimistic updates, and performance.
+- 🗂️ **File-based Routing**: Easy navigation using Expo Router and stack/tab navigation.
+- 🔍 **Search**: Search for food spots by name.
+- 📍 **Location Support**: Display and manage city/address for food spots.
+- 🏆 **Favorites**: Mark food spots as favorites and manage your favorite list.
+- 🖼️ **Community Photos**: View all community-uploaded photos for a food spot in a carousel.
+- 🛡️ **Error Handling**: User-friendly error and loading states throughout the app.
+- 📦 **TypeScript Support**: Strong typing for safer and more maintainable code.
+- 🧪 **Component Reusability**: Modular components for reviews, food spots, UI elements, and more.
 
 ## Architecture
 

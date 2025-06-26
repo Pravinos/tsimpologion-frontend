@@ -81,7 +81,10 @@ export const login = async (credentials) => {
     }
     return response.data;
   } catch (error) {
-    console.error('Login failed:', error.response?.data || error.message);
+    // Only log unexpected errors (not 401/422)
+    if (!error.response || (error.response.status !== 401 && error.response.status !== 422)) {
+      console.error('Login failed:', error.response?.data || error.message);
+    }
     throw error;
   }
 };
@@ -94,7 +97,10 @@ export const register = async (userData) => {
     }
     return response.data;
   } catch (error) {
-    console.error('Registration failed:', error.response?.data || error.message);
+    // Only log unexpected errors (not 422)
+    if (!error.response || error.response.status !== 422) {
+      console.error('Registration failed:', error.response?.data || error.message);
+    }
     throw error;
   }
 };

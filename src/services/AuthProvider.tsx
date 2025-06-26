@@ -103,30 +103,21 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
   const login = async (credentials: LoginCredentials) => {
     try {
-      // Clear any previous error state first
       await clearAuthData();
-      
-      // Call the login API
       const response = await apiClient.login(credentials);
-      
-      // Check if we got a token back
       if (response && response.token) {
         try {
-          // Fetch the user data with the new token
           const userResponse = await apiClient.getCurrentUser();
           const userData = userResponse.data?.data || userResponse.data;
-          
           if (userData) {
-            // Store everything in state and localStorage
             setUser(userData);
             setToken(response.token);
             await saveAuthData(response.token, userData);
-            return response; // Return the full response for the caller
+            return response;
           } else {
             throw new Error('No user data returned after login');
           }
         } catch (userError) {
-          console.error('Error fetching user after login:', userError);
           await clearAuthData();
           throw userError;
         }
@@ -134,61 +125,54 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
         throw new Error('No token returned from login');
       }
     } catch (error: any) {
-      // Only log unexpected errors
-      if (!error.response || (error.response.status !== 401 && error.response.status !== 422)) {
-        console.error('Login error:', error);
-      }
-      
-      // Make sure we clear any partial auth state
       await clearAuthData();
-      
-      // Re-throw to let the UI handle the error
-      throw error;
+      // For expected auth/validation errors, return a custom object
+      if (error.response && (error.response.status === 401 || error.response.status === 422)) {
+        return { authError: true, message: error.response.data?.message || 'Invalid email or password.' };
+      }
+      // Unexpected: don't throw, but return a custom object for the UI to handle
+      return { unexpectedError: true, message: error?.message || 'Unexpected login error.' };
     }
   };
   const register = async (userData: RegisterData) => {
     try {
-      // Clear any previous auth state
       await clearAuthData();
-      
-      // Call the register API
       const response = await apiClient.register(userData);
-      
-      // Check if we got a token back
+      if (response && response.message) {
+        return response;
+      }
       if (response && response.token) {
         try {
-          // Fetch the user data with the new token
           const userResponse = await apiClient.getCurrentUser();
           const newUserData = userResponse.data?.data || userResponse.data;
-          
           if (newUserData) {
-            // Store everything in state and localStorage
             setUser(newUserData);
             setToken(response.token);
             await saveAuthData(response.token, newUserData);
-            return response; // Return the full response for the caller
+            return response;
           } else {
             throw new Error('No user data returned after registration');
           }
         } catch (userError) {
-          console.error('Error fetching user after registration:', userError);
           await clearAuthData();
           throw userError;
         }
-      } else {
-        throw new Error('No token returned from registration');
       }
+      throw new Error('Registration response not recognized.');
     } catch (error: any) {
-      // Only log unexpected errors
-      if (!error.response || (error.response.status !== 401 && error.response.status !== 422)) {
-        console.error('Registration error:', error);
-      }
-      
-      // Make sure we clear any partial auth state
       await clearAuthData();
-      
-      // Re-throw to let the UI handle the error
-      throw error;
+      // For expected validation errors, return a custom object
+      if (error.response && error.response.status === 422) {
+        let message = 'Registration failed.';
+        if (error.response.data?.errors) {
+          message = Object.values(error.response.data.errors).flat().join('\n');
+        } else if (error.response.data?.message) {
+          message = error.response.data.message;
+        }
+        return { authError: true, message };
+      }
+      // Unexpected: don't throw, but return a custom object for the UI to handle
+      return { unexpectedError: true, message: error?.message || 'Unexpected registration error.' };
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useReducer, useEffect, useRef } from 'react';
+import React, { useState, useReducer } from 'react';
 import {
   StyleSheet,
   KeyboardAvoidingView,
@@ -8,8 +8,7 @@ import {
   Image,
   Text,
   TouchableOpacity,
-  Animated,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -17,8 +16,10 @@ import colors from '@/app/styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import AuthInput from '@/app/components/UI/AuthInput';
 import { CustomStatusBar, AnimatedAuthButton } from '@/app/components/UI';
+import ErrorBox from '@/app/components/UI/ErrorBox';
+import { useAuthScreenAnimations } from '@/app/hooks/useAuthScreenAnimations';
 import * as Haptics from 'expo-haptics';
-import { fadeIn, slideIn, parallelAnimations } from '@/app/utils/animationUtils';
+import { Animated } from 'react-native';
 
 interface LoginScreenProps {
   navigation: any;
@@ -41,6 +42,7 @@ type FormAction =
   | { type: 'SET_ERRORS'; errors: FormState['errors'] }
   | { type: 'CLEAR_ERRORS' };
 
+// --- Reducer and Initial State ---
 const initialState: FormState = {
   values: {
     email: '',
@@ -55,7 +57,7 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
       return {
         ...state,
         values: { ...state.values, [action.field]: action.value },
-        errors: { ...state.errors, [action.field]: undefined }, // Clear error on change
+        errors: { ...state.errors, [action.field]: undefined },
       };
     case 'SET_ERRORS':
       return { ...state, errors: action.errors };
@@ -66,6 +68,7 @@ const formReducer = (state: FormState, action: FormAction): FormState => {
   }
 };
 
+// --- Main Component ---
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [formState, dispatch] = useReducer(formReducer, initialState);
   const [showPassword, setShowPassword] = useState(false);
@@ -73,63 +76,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [apiError, setApiError] = useState<string | null>(null);
   const { login } = useAuth();
 
-  // Animation values
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoTranslateY = useRef(new Animated.Value(-50)).current;
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formTranslateY = useRef(new Animated.Value(30)).current;
-  const errorOpacity = useRef(new Animated.Value(0)).current;
-  
-  // Start animations when component mounts
-  useEffect(() => {
-    // Using staggered animation for smoother performance
-    const animationDelay = Platform.OS === 'android' ? 100 : 50;
-    
-    // Logo animation
-    Animated.timing(logoOpacity, {
-      toValue: 1,
-      duration: 600,
-      delay: 300,
-      useNativeDriver: true,
-    }).start();
-    
-    Animated.timing(logoTranslateY, {
-      toValue: 0,
-      duration: 600,
-      delay: 300,
-      useNativeDriver: true,
-    }).start();
-    
-    // Form animation with delay
-    setTimeout(() => {
-      Animated.timing(formOpacity, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-      
-      Animated.timing(formTranslateY, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
-    }, 600 + animationDelay);
-  }, [logoOpacity, logoTranslateY, formOpacity, formTranslateY]);
+  // Animations
+  const { logoOpacity, logoTranslateY, formOpacity, formTranslateY, errorOpacity } = useAuthScreenAnimations(apiError);
 
-  // Error animation
-  useEffect(() => {
-    if (apiError) {
-      errorOpacity.setValue(0);
-      Animated.timing(errorOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-      // Provide haptic feedback for error
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-  }, [apiError, errorOpacity]);
-
+  // --- Handlers ---
   const handleInputChange = (field: keyof FormState['values'], value: string) => {
     dispatch({ type: 'UPDATE_FIELD', field, value });
   };
@@ -137,7 +87,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const validateForm = (): boolean => {
     const { email, password } = formState.values;
     const newErrors: FormState['errors'] = {};
-
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
@@ -146,7 +95,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     if (!password) {
       newErrors.password = 'Password is required';
     }
-
     dispatch({ type: 'SET_ERRORS', errors: newErrors });
     return Object.keys(newErrors).length === 0;
   };
@@ -157,28 +105,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
-    
-    // Success haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
     setIsLoading(true);
     try {
-      await login(formState.values);
-      // On successful login, the AuthProvider and AppNavigator will handle navigation
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || 'Login failed. Please check your credentials.';
-      setApiError(errorMessage);
+      const result = await login(formState.values);
+      if (result?.authError) {
+        setApiError(result.message);
+      } else if (result?.unexpectedError) {
+        setApiError(null);
+        Alert.alert('Login Error', result.message, [{ text: 'OK', style: 'default' }]);
+      }
+      // If login is successful, navigation is handled by AuthProvider/AppNavigator
     } finally {
       setIsLoading(false);
     }
   };
 
   const navigateToRegister = () => {
-    // Provide haptic feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('Register');
   };
 
+  // --- Render ---
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <CustomStatusBar backgroundColor={colors.white} />
@@ -210,7 +158,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <Text style={styles.appName}>Tsimpologion</Text>
             <Text style={styles.tagline}>Find your comfort food, wherever you are!</Text>
           </Animated.View>
-          
           {/* Form section with animation */}
           <Animated.View 
             style={[
@@ -223,14 +170,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           >
             <View style={styles.formContainer}>
               <Text style={styles.title}>Welcome Back!</Text>
-              
               {apiError && (
-                <Animated.View style={[styles.errorBox, { opacity: errorOpacity }]}>
-                  <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 6 }} />
-                  <Text style={styles.errorText}>{apiError}</Text>
-                </Animated.View>
+                <ErrorBox error={apiError} errorOpacity={errorOpacity} />
               )}
-              
               <AuthInput
                 icon="mail"
                 placeholder="Email Address"
@@ -238,9 +180,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 onChangeText={(value) => handleInputChange('email', value)}
                 editable={!isLoading}
                 error={formState.errors.email}
-                delay={0} // Remove delays for smoother UX
+                delay={0}
               />
-              
               <AuthInput
                 icon="lock"
                 placeholder="Password"
@@ -252,18 +193,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 showValue={showPassword}
                 editable={!isLoading}
                 error={formState.errors.password}
-                delay={0} // Remove delays for smoother UX
+                delay={0}
               />
-              
               <AnimatedAuthButton
                 title="Sign In"
                 onPress={handleLogin}
                 isLoading={isLoading}
                 disabled={isLoading}
                 icon="log-in"
-                delay={0} // Remove delays for smoother UX
+                delay={0}
               />
-              
               <View style={styles.registerContainer}>
                 <Text style={styles.registerText}>Don't have an account? </Text>
                 <TouchableOpacity 
@@ -344,22 +283,6 @@ const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 20,
     textAlign: 'center',
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff6f6',
-    borderColor: colors.error,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: colors.error,
-    textAlign: 'left',
-    fontSize: 14,
-    flex: 1,
   },
   registerContainer: {
     flexDirection: 'row',

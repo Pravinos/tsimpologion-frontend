@@ -20,7 +20,7 @@ import { useFoodSpots } from '@/app/hooks/useFoodSpots';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
-import { FilterModal, SearchBar, ListTypeSelector, CustomStatusBar } from '../components/UI';
+import { FilterModal, SearchBar, ListTypeSelector, CustomStatusBar } from '@/app/components/UI';
 
 // Utilities and styles
 import colors from '../styles/colors';
@@ -36,9 +36,57 @@ const SORT_OPTIONS = [
 
 type ListType = 'popular' | 'favourites' | 'mySpots';
 
+// --- Helper Components ---
+const LoadingState = () => (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <CustomStatusBar backgroundColor={colors.white} />
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.loadingText}>Loading food spots...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+const ErrorState = ({ listType, refetch }: { listType: ListType; refetch: () => void }) => (
+  <View style={styles.errorContainer}>
+    <Text style={styles.errorText}>
+      Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
+    </Text>
+    <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+      <Text style={styles.retryText}>Try Again</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; isLoading: boolean; isFetching: boolean }) => {
+  // Only show if not loading/fetching
+  if (isLoading || isFetching) return null;
+  return (
+    <View style={styles.emptyContainer}>
+      <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
+      <Text style={styles.emptyText}>
+        {listType === 'favourites' 
+          ? "You haven't saved any favorites yet" 
+          : listType === 'mySpots' 
+            ? "You haven't added any food spots yet"
+            : "No food spots found"}
+      </Text>
+      <Text style={styles.emptySubText}>
+        {listType === 'favourites' 
+          ? "Browse popular spots and tap the heart icon to add them to your favorites"
+          : listType === 'mySpots'
+            ? "Add your first food spot to get started!"
+            : "Try adjusting your filters or search keywords."}
+      </Text>
+    </View>
+  );
+};
+
+// --- Main Component ---
 const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  
+
+  // Memoized list options
   const LIST_OPTIONS = useMemo(() => {
     const options = [
       { label: 'Popular', value: 'popular' as ListType },
@@ -55,14 +103,14 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedPriceRange, setSelectedPriceRange] = useState(''); // Added price range state
+  const [selectedPriceRange, setSelectedPriceRange] = useState('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>(''); // Added price sort state
+  const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>('');
 
   // Query for food spots using the custom hook
   const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots(listType);
 
-  // Dynamically extract unique categories from the current list
+  // Memoized categories
   const categories = useMemo(() => {
     const set = new Set<string>();
     currentData.forEach((spot: FoodSpot) => {
@@ -71,70 +119,46 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     return Array.from(set).sort();
   }, [currentData]);
 
-  // Filter and sort food spots based on search, category, price range, and sort direction
+  // Memoized filtered and sorted food spots
   const filteredFoodSpots = useMemo(() => {
     let filtered = currentData.filter((spot: FoodSpot) => {
       const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
       const matchesCategory = !selectedCategory || 
         (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-      const matchesPriceRange = !selectedPriceRange || spot.price_range === selectedPriceRange; // Added price range filter
+      const matchesPriceRange = !selectedPriceRange || spot.price_range === selectedPriceRange;
       return matchesSearch && matchesCategory && matchesPriceRange;
     });
-      filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
-      // Price sorting takes priority if selected
+    filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
       if (priceSortDirection && a.price_range && b.price_range) {
         const priceOrder = ['€', '€€', '€€€'];
         const aPrice = priceOrder.indexOf(a.price_range);
         const bPrice = priceOrder.indexOf(b.price_range);
-        
-        if (priceSortDirection === 'asc') {
-          return aPrice - bPrice; // Cheapest first
-        } else {
-          return bPrice - aPrice; // Most expensive first
-        }
+        return priceSortDirection === 'asc' ? aPrice - bPrice : bPrice - aPrice;
       }
-      
-      // Default to rating sorting
-      if (sortDirection === 'asc') {
-        return (a.rating || 0) - (b.rating || 0);
-      } else {
-        return (b.rating || 0) - (a.rating || 0);
-      }
+      return sortDirection === 'asc'
+        ? (a.rating || 0) - (b.rating || 0)
+        : (b.rating || 0) - (a.rating || 0);
     });
-      return filtered;
-  }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]); // Added priceSortDirection to dependencies
+    return filtered;
+  }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]);
 
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
+  // --- Memoized Callbacks ---
+  const handleRefresh = useCallback(() => refetch(), [refetch]);
   const navigateToDetail = useCallback((item: FoodSpot) => {
     navigation.navigate('FoodSpotDetail', { foodSpot: item });
   }, [navigation]);
-
   const renderItem = useCallback(({ item }: { item: FoodSpot }) => (
-    <FoodSpotItem 
-      item={item} 
-      onPress={() => navigateToDetail(item)}
-    />
+    <FoodSpotItem item={item} onPress={() => navigateToDetail(item)} />
   ), [navigateToDetail]);
-
   const handleListTypeChange = useCallback((value: string) => {
     setListType(value as ListType);
   }, []);
 
-  // Show loading state
+  // --- Render ---
   if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading food spots...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingState />;
   }
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -172,17 +196,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             />
           </View>
           {isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
-                Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
-              </Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => refetch()}
-              >
-                <Text style={styles.retryText}>Try Again</Text>
-              </TouchableOpacity>
-            </View>
+            <ErrorState listType={listType} refetch={refetch} />
           ) : (
             <FlatList
               data={filteredFoodSpots}
@@ -193,25 +207,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               refreshing={isFetching}
               onRefresh={handleRefresh}
               ListEmptyComponent={
-                isError ? (
-                  <View style={styles.emptyContainer}>
-                    <Feather name="search" size={60} color={colors.primary} style={styles.emptyIcon} />
-                    <Text style={styles.emptyText}>
-                      {listType === 'favourites' 
-                        ? "You haven't saved any favorites yet" 
-                        : listType === 'mySpots' 
-                          ? "You haven't added any food spots yet"
-                          : "No food spots found"}
-                    </Text>
-                    <Text style={styles.emptySubText}>
-                      {listType === 'favourites' 
-                        ? "Browse popular spots and tap the heart icon to add them to your favorites"
-                        : listType === 'mySpots'
-                          ? "Add your first food spot to get started!"
-                          : "Try adjusting your filters or search keywords."}
-                    </Text>
-                  </View>
-                ) : null
+                isError ? null : <EmptyState listType={listType} isLoading={isLoading} isFetching={isFetching} />
               }
             />
           )}
@@ -220,7 +216,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             onClose={() => setFilterModalVisible(false)}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
-            selectedPriceRange={selectedPriceRange} 
+            selectedPriceRange={selectedPriceRange}
             setSelectedPriceRange={setSelectedPriceRange}
             sortDirection={sortDirection}
             setSortDirection={setSortDirection}

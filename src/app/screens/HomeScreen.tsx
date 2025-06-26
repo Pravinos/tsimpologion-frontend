@@ -144,6 +144,17 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     return filtered;
   }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]);
 
+  // Memoized food spot name suggestions for the search bar
+  const spotSuggestions = useMemo(() => {
+    if (!searchText || !currentData) return [];
+    return currentData
+      .filter((spot: FoodSpot) =>
+        spot.name.toLowerCase().startsWith(searchText.toLowerCase())
+      )
+      .map((spot: FoodSpot) => spot.name)
+      .slice(0, 5); // Limit to 5 suggestions
+  }, [searchText, currentData]);
+
   // --- Memoized Callbacks ---
   const handleRefresh = useCallback(() => refetch(), [refetch]);
   const navigateToDetail = useCallback((item: FoodSpot) => {
@@ -196,6 +207,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             searchText={searchText}
             setSearchText={setSearchText}
             onFilterPress={() => setFilterModalVisible(true)}
+            suggestions={spotSuggestions}
+            onSelectSuggestion={(name) => setSearchText(name)}
           />
           <View style={styles.listTypeSelectorContainer}>
             <ListTypeSelector

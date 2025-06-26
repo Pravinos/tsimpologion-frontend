@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Text } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import colors from '../../styles/colors';
@@ -8,10 +8,13 @@ interface SearchBarProps {
   searchText: string;
   setSearchText: (text: string) => void;
   onFilterPress: () => void;
+  suggestions?: string[];
+  onSelectSuggestion?: (suggestion: string) => void;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilterPress }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilterPress, suggestions = [], onSelectSuggestion }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const scale = useSharedValue(1);
   const shadow = useSharedValue(1);
 
@@ -29,20 +32,55 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilt
 
   return (
     <View style={styles.searchContainer}>
-      <Animated.View style={[styles.searchBar, animatedStyle]}>
-        <Feather name="search" size={20} color={colors.darkGray} />
-        <TextInput
-          style={[styles.searchInput, { fontSize: 13 }]}
-          placeholder="What are you hungry for today?"
-          placeholderTextColor={colors.darkGray}
-          value={searchText}
-          onChangeText={setSearchText}
-          autoCapitalize="none"
-          autoCorrect={false}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-        />
-      </Animated.View>
+      <View style={{ flex: 1 }}>
+        <Animated.View style={[styles.searchBar, animatedStyle]}>
+          <Feather name="search" size={20} color={colors.darkGray} />
+          <TextInput
+            ref={inputRef}
+            style={[styles.searchInput, { fontSize: 13 }]}
+            placeholder="What are you hungry for today?"
+            placeholderTextColor={colors.darkGray}
+            value={searchText}
+            onChangeText={setSearchText}
+            autoCapitalize="none"
+            autoCorrect={false}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchText('');
+                setTimeout(() => {
+                  inputRef.current?.focus();
+                  setIsFocused(true);
+                }, 10);
+              }}
+              style={styles.clearButton}
+              accessibilityLabel="Clear search"
+            >
+              <Feather name="x" size={18} color={colors.mediumGray} />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+        {isFocused && searchText.length > 0 && suggestions.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            {suggestions.map((suggestion, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.suggestionItem}
+                onPress={() => {
+                  onSelectSuggestion?.(suggestion);
+                  setIsFocused(false);
+                }}
+              >
+                <Feather name="map-pin" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
       <TouchableOpacity
         style={styles.filterButton}
         onPress={onFilterPress}
@@ -95,6 +133,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 54,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    zIndex: 10,
+    paddingVertical: 4,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: colors.black,
+  },
+  clearButton: {
+    marginLeft: 4,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

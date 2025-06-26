@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const parsedUser = JSON.parse(storedUserJson);
             setUser(parsedUser);
             setToken(storedToken);
-            console.log('User loaded from storage:', parsedUser.name);
+            console.log('User loaded from storage:', parsedUser.username);
           } else {
             // Only fetch from API if we have a token but no stored user
             try {

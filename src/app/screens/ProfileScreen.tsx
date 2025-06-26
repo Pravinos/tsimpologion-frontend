@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,7 +7,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ import { CustomStatusBar } from '../components/UI';
 // --- Helper Components ---
 const LoadingState = () => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} />
+    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Loading profile...</Text>
@@ -32,7 +33,7 @@ const LoadingState = () => (
 
 const NotLoggedInState = ({ navigation }: { navigation: any }) => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} />
+    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.notLoggedInContainer}>
       <Text style={styles.notLoggedInText}>
         Please log in to view your profile.
@@ -49,7 +50,7 @@ const NotLoggedInState = ({ navigation }: { navigation: any }) => (
 
 const ErrorState = ({ refetchProfile, handleLogout }: { refetchProfile: () => void; handleLogout: () => void }) => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} />
+    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.errorContainer}>
       <Text style={styles.errorText}>Failed to load profile.</Text>
       <TouchableOpacity style={styles.retryButton} onPress={refetchProfile}>
@@ -87,7 +88,14 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
   }, [logout, queryClient, token]);
 
   // Memoized derived values
-  const displayName = React.useMemo(() => userProfile?.name || authUser?.name || 'User', [userProfile, authUser]);
+  const displayFullName = React.useMemo(() => {
+    if (userProfile?.first_name || userProfile?.last_name) {
+      return `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim();
+    }
+    return 'N/A';
+  }, [userProfile]);
+  const displayUsername = React.useMemo(() => userProfile?.username || 'N/A', [userProfile]);
+  const displayPhone = React.useMemo(() => userProfile?.phone || null, [userProfile]);
   const displayEmail = React.useMemo(() => userProfile?.email || authUser?.email || 'No email', [userProfile, authUser]);
   const displayJoinDate = React.useMemo(() => userProfile?.created_at 
     ? new Date(userProfile.created_at).toLocaleDateString() 
@@ -102,19 +110,24 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     return 'Food Explorer';
   }, [userProfile]);
 
+  useEffect(() => {
+    // Set status bar style for ProfileScreen
+    StatusBar.setBarStyle('light-content');
+  }, []);
+
   if (isProfileLoading) return <LoadingState />;
   if (!token) return <NotLoggedInState navigation={navigation} />;
   if (isProfileError) return <ErrorState refetchProfile={refetchProfile} handleLogout={handleLogout} />;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <CustomStatusBar backgroundColor={colors.primary} />
+      <CustomStatusBar backgroundColor={colors.primary} barStyle="light-content" />
       <View style={{flex: 1}}>
         <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
           <View style={styles.headerShadow}>
             <View style={styles.headerCard}>
               <View style={styles.avatarContainer}>
-                {userProfile?.images && userProfile.images.length > 0 ? (
+                {userProfile?.images && Array.isArray(userProfile.images) && userProfile.images.length > 0 ? (
                   <Image 
                     source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
                     style={styles.avatar} 
@@ -123,12 +136,35 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
                   <Feather name="user" size={40} color={colors.white} />
                 )}
               </View>
-              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.name}>{displayFullName}</Text>
               <Text style={styles.role}>{displayRole}</Text>
             </View>
           </View>
           <View style={styles.infoSectionCard}>
             <Text style={styles.sectionTitle}>Account Information</Text>
+            <View style={styles.infoItem}>
+              <Feather name="user" size={20} color={colors.primary} style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Username</Text>
+                <Text style={styles.infoValue}>{displayUsername}</Text>
+              </View>
+            </View>
+            <View style={styles.infoItem}>
+              <Feather name="user-check" size={20} color={colors.primary} style={styles.infoIcon} />
+              <View>
+                <Text style={styles.infoLabel}>Full Name</Text>
+                <Text style={styles.infoValue}>{displayFullName}</Text>
+              </View>
+            </View>
+            {displayPhone && (
+              <View style={styles.infoItem}>
+                <Feather name="phone" size={20} color={colors.primary} style={styles.infoIcon} />
+                <View>
+                  <Text style={styles.infoLabel}>Phone</Text>
+                  <Text style={styles.infoValue}>{displayPhone}</Text>
+                </View>
+              </View>
+            )}
             <View style={styles.infoItem}>
               <Feather name="mail" size={20} color={colors.primary} style={styles.infoIcon} />
               <View>

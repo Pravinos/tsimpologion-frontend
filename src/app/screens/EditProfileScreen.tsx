@@ -28,8 +28,11 @@ import PasswordSection from '../components/Profile/PasswordSection';
 import { uploadImage as uploadImageUtil } from '../utils/uploadUtils';
 
 interface FormErrors {
-  name?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
   email?: string;
+  phone?: string;
   currentPassword?: string;
   newPassword?: string;
   confirmPassword?: string;
@@ -62,7 +65,10 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
   const queryClient = useQueryClient();
 
   // Form fields
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -92,9 +98,12 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
   // Pre-fill form fields with user data when loaded
   React.useEffect(() => {
     if (userProfile) {
-      setName(userProfile.name || '');
+      setUsername(userProfile.username || '');
+      setFirstName(userProfile.first_name || '');
+      setLastName(userProfile.last_name || '');
+      setPhone(userProfile.phone || '');
       setEmail(userProfile.email || '');
-      if (userProfile.images && userProfile.images.length > 0) {
+      if (userProfile.images && Array.isArray(userProfile.images) && userProfile.images.length > 0) {
         const img = userProfile.images[0];
         setSelectedImage(typeof img === 'string' ? img : img.url || img);
       }
@@ -103,14 +112,17 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
 
   // Memoized form values (for future extensibility)
   const formValues = React.useMemo(() => ({
-    name,
+    username,
+    firstName,
+    lastName,
+    phone,
     email,
     currentPassword,
     newPassword,
     confirmPassword,
     selectedImage,
     pickerAsset,
-  }), [name, email, currentPassword, newPassword, confirmPassword, selectedImage, pickerAsset]);
+  }), [username, firstName, lastName, phone, email, currentPassword, newPassword, confirmPassword, selectedImage, pickerAsset]);
 
   // Handlers (useCallback for performance)
   const handlePickImage = React.useCallback(async () => {
@@ -140,7 +152,9 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
 
   const validateForm = React.useCallback(() => {
     const newErrors: FormErrors = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!username.trim()) newErrors.username = 'Username is required';
+    if (!firstName.trim()) newErrors.first_name = 'First name is required';
+    if (!lastName.trim()) newErrors.last_name = 'Last name is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!emailRegex.test(email)) newErrors.email = 'Please enter a valid email address';
@@ -152,7 +166,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [name, email, currentPassword, newPassword, confirmPassword]);
+  }, [username, firstName, lastName, email, currentPassword, newPassword, confirmPassword]);
 
   const handleSave = React.useCallback(async () => {
     if (!validateForm() || !userProfile) return;
@@ -184,8 +198,11 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         imageUrlToSend =
           uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl);
       }
-      const updateData: UpdateData = {
-        name: name.trim(),
+      const updateData: any = {
+        username: username.trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim() || undefined,
         email: email.trim(),
       };
       if (currentPassword && newPassword) {
@@ -227,7 +244,7 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     } finally {
       setSaving(false);
     }
-  }, [validateForm, userProfile, selectedImage, pickerAsset, name, email, currentPassword, newPassword, confirmPassword, updateUserInContext, queryClient, token, navigation]);
+  }, [validateForm, userProfile, selectedImage, pickerAsset, username, firstName, lastName, phone, email, currentPassword, newPassword, confirmPassword, updateUserInContext, queryClient, token, navigation]);
 
   if (loading) return <LoadingState />;
 
@@ -241,14 +258,69 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         >
           <ScrollView style={styles.content} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
             <AvatarSection selectedImage={selectedImage} onPickImage={handlePickImage} saving={saving} />
-            <PersonalInfoSection
-              name={name}
-              setName={setName}
-              email={email}
-              setEmail={setEmail}
-              errors={errors}
-              saving={saving}
-            />
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Personal Information</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  style={[styles.input, errors.username && styles.inputError]}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="Enter your username"
+                  editable={!saving}
+                  autoCapitalize="none"
+                />
+                {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>First Name</Text>
+                <TextInput
+                  style={[styles.input, errors.first_name && styles.inputError]}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Enter your first name"
+                  editable={!saving}
+                  autoCapitalize="words"
+                />
+                {errors.first_name && <Text style={styles.errorText}>{errors.first_name}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Last Name</Text>
+                <TextInput
+                  style={[styles.input, errors.last_name && styles.inputError]}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Enter your last name"
+                  editable={!saving}
+                  autoCapitalize="words"
+                />
+                {errors.last_name && <Text style={styles.errorText}>{errors.last_name}</Text>}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="Enter your phone number"
+                  editable={!saving}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!saving}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              </View>
+            </View>
             <PasswordSection
               currentPassword={currentPassword}
               setCurrentPassword={setCurrentPassword}

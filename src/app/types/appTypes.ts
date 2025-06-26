@@ -57,7 +57,11 @@ export interface Review {
 
 export interface User {
   id: number;
-  name?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  name?: string; // legacy, for compatibility
   email: string;
   role?: 'foodie' | 'spot_owner' | 'admin';
   created_at?: string;
@@ -65,7 +69,7 @@ export interface User {
     id: number;
     url: string;
     user_id?: number;
-  }[];
+  }[] | null;
 }
 
 export type RootStackParamList = {

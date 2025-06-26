@@ -5,17 +5,19 @@ import { getIdealStatusBarStyle } from '@/app/utils/getIdealStatusBarStyle';
 
 interface CustomStatusBarProps {
   backgroundColor: string;
+  barStyle?: 'light-content' | 'dark-content';
 }
 
-const CustomStatusBar: React.FC<CustomStatusBarProps> = ({ backgroundColor }) => {
-  const statusBarStyle = getIdealStatusBarStyle(backgroundColor);
+const CustomStatusBar: React.FC<CustomStatusBarProps> = ({ backgroundColor, barStyle }) => {
+  // If barStyle is provided, use it; otherwise, determine from backgroundColor
+  const statusBarStyle = barStyle || (getIdealStatusBarStyle(backgroundColor) === 'dark' ? 'dark-content' : 'light-content');
 
   return (
     <View style={[styles.statusBar, { backgroundColor }]}>
       <StatusBar
         translucent
         backgroundColor={backgroundColor}
-        barStyle={statusBarStyle === 'dark' ? 'dark-content' : 'light-content'}
+        barStyle={statusBarStyle}
       />
     </View>
   );

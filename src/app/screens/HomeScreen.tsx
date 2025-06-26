@@ -1,15 +1,17 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  FlatList, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Image,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  StatusBar
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -39,7 +41,7 @@ type ListType = 'popular' | 'favourites' | 'mySpots';
 // --- Helper Components ---
 const LoadingState = () => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} />
+    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Loading food spots...</Text>
@@ -154,6 +156,13 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     setListType(value as ListType);
   }, []);
 
+  // --- Focus Effect for StatusBar ---
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
+
   // --- Render ---
   if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
     return <LoadingState />;
@@ -162,12 +171,12 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
+        <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
         <View style={styles.container}>
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>
               <Text style={styles.welcome}>
-                {user && user.name ? `Hi ${user.name} 👋` : 'Hi 👋'}
+                {user && user.username ? `Hi ${user.username} 👋` : 'Hi 👋'}
               </Text>
               <Text style={styles.title}>Find the perfect spot</Text>
               <Text style={styles.subtitle}>Explore authentic flavors near you</Text>

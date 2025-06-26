@@ -28,13 +28,19 @@ interface RegisterScreenProps {
 // Form state and actions for the reducer
 interface FormState {
   values: {
-    name: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
     email: string;
     password: string;
     passwordConfirmation: string;
   };
   errors: {
-    name?: string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
     email?: string;
     password?: string;
     passwordConfirmation?: string;
@@ -49,7 +55,10 @@ type FormAction =
 // --- Reducer and Initial State ---
 const initialState: FormState = {
   values: {
-    name: '',
+    username: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
     email: '',
     password: '',
     passwordConfirmation: '',
@@ -91,9 +100,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   };
 
   const validateForm = (): boolean => {
-    const { name, email, password, passwordConfirmation } = formState.values;
+    const { username, first_name, last_name, phone, email, password, passwordConfirmation } = formState.values;
     const newErrors: FormState['errors'] = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!username.trim()) newErrors.username = 'Username is required';
+    if (!first_name.trim()) newErrors.first_name = 'First name is required';
+    if (!last_name.trim()) newErrors.last_name = 'Last name is required';
+    if (!phone.trim()) newErrors.phone = 'Phone number is required';
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
@@ -123,7 +135,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     setIsLoading(true);
     try {
       const result = await register({
-        name: formState.values.name,
+        username: formState.values.username,
+        first_name: formState.values.first_name,
+        last_name: formState.values.last_name,
+        phone: formState.values.phone,
         email: formState.values.email,
         password: formState.values.password,
         password_confirmation: formState.values.passwordConfirmation,
@@ -200,12 +215,42 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               )}
               <AuthInput
                 icon="user"
-                placeholder="Full Name"
-                value={formState.values.name}
-                onChangeText={(value) => handleInputChange('name', value)}
+                placeholder="Username"
+                value={formState.values.username}
+                onChangeText={(value) => handleInputChange('username', value)}
+                editable={!isLoading}
+                autoCapitalize="none"
+                error={formState.errors.username}
+                delay={0}
+              />
+              <AuthInput
+                icon="user"
+                placeholder="First Name"
+                value={formState.values.first_name}
+                onChangeText={(value) => handleInputChange('first_name', value)}
                 editable={!isLoading}
                 autoCapitalize="words"
-                error={formState.errors.name}
+                error={formState.errors.first_name}
+                delay={0}
+              />
+              <AuthInput
+                icon="user"
+                placeholder="Last Name"
+                value={formState.values.last_name}
+                onChangeText={(value) => handleInputChange('last_name', value)}
+                editable={!isLoading}
+                autoCapitalize="words"
+                error={formState.errors.last_name}
+                delay={0}
+              />
+              <AuthInput
+                icon="phone"
+                placeholder="Phone Number"
+                value={formState.values.phone}
+                onChangeText={(value) => handleInputChange('phone', value)}
+                editable={!isLoading}
+                keyboardType="phone-pad"
+                error={formState.errors.phone}
                 delay={0}
               />
               <AuthInput

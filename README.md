@@ -4,8 +4,6 @@ A modern React Native app (built with [Expo](https://expo.dev)) for discovering 
 
 ## Features
 
-## Features
-
 - 🔐 **User Authentication**: Register, log in, log out, and manage authentication state securely.
 - 👤 **Profile Management**: Edit your profile, change your password, upload an avatar, and manage user details.
 - 🍴 **Food Spot Discovery**: Browse, filter, and sort food spots by category, rating, and location.

@@ -52,6 +52,22 @@ You can find the backend [here](https://github.com/Pravinos/tsimpologion-backend
 
    Edit files in the `app` directory. Routing is file-based ([docs](https://docs.expo.dev/router/introduction/)).
 
+## 🚀 Test the App Instantly with Expo Go
+
+You can try out Tsimpologion right now on your mobile device!
+
+1. **Install Expo Go:**  
+   Download the [Expo Go app](https://expo.dev/client) from the [App Store (iOS)](https://apps.apple.com/app/expo-go/id982107779) or [Google Play (Android)](https://play.google.com/store/apps/details?id=host.exp.exponent).
+
+2. **Scan the QR Code Below:**  
+   Open Expo Go and use its built-in QR code scanner to scan this code:
+
+   ![Scan this QR code with Expo Go](src/assets/expo_qr.png)
+
+3. **Open the App:**  
+   The app will load instantly, using the latest published update!
+
+
 ## Learn More
 
 - [Expo documentation](https://docs.expo.dev/)

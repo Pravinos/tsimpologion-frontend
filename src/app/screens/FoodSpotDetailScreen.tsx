@@ -640,8 +640,8 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: colors.white,
     borderRadius: 18,
-    marginHorizontal: 13,
-    marginBottom: 18,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },

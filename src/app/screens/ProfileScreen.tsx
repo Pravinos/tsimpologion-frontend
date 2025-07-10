@@ -277,9 +277,9 @@ const styles = StyleSheet.create({
   infoSectionCard: {
     backgroundColor: colors.white,
     borderRadius: 18,
-    marginHorizontal: 18,
+    marginHorizontal: 16,
     marginTop: -24,
-    marginBottom: 18,
+    marginBottom: 16,
     padding: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
@@ -290,8 +290,8 @@ const styles = StyleSheet.create({
   actionsSectionCard: {
     backgroundColor: colors.white,
     borderRadius: 18,
-    marginHorizontal: 18,
-    marginBottom: 18,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 10,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },

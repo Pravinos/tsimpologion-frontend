@@ -338,7 +338,6 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
               onPress={handleSave}
               loading={saving}
               disabled={saving}
-              style={{ marginHorizontal: 8, marginBottom: 8 }}
             />
           </View>
         </KeyboardAvoidingView>
@@ -382,7 +381,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: colors.white,
     borderRadius: 18,
-    marginHorizontal: 13,
+    marginHorizontal: 16,
     marginBottom: 18,
     padding: 20,
     shadowColor: colors.primary,
@@ -434,26 +433,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.lightGray,
   },
-  saveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.mediumGray,
-  },
-  saveButtonText: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -474,9 +453,9 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: colors.white,
     borderRadius: 18,
-    marginHorizontal: 18,
+    marginHorizontal: 16,
     marginTop: -24,
-    marginBottom: 18,
+    marginBottom: 16,
     padding: 20,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },

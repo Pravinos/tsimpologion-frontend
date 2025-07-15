@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   listTypeSelectorContainer: {
     marginTop: 6,
     marginBottom: 6,
+    paddingHorizontal: 5,
   },
   listContent: {
     paddingBottom: 20,

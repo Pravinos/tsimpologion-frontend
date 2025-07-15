@@ -149,7 +149,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         onPress={handleSubmit}
         loading={isSubmitting}
         disabled={isSubmitting || imageUploading}
-        style={{ marginTop: 10, marginBottom: 8 }}
+        style={{ marginHorizontal: -1}}
       />
     </>
   );
@@ -229,20 +229,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: colors.darkGray,
     fontStyle: 'italic',
-  },
-  submitButton: {
-    backgroundColor: colors.primary,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  submitButtonDisabled: {
-    backgroundColor: colors.mediumGray,
   },
   loginPrompt: {
     alignItems: 'center',

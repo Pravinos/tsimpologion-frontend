@@ -165,7 +165,7 @@ const UserReviewItem = ({ review, onUpdate, onDelete, onToggleLike, isLiked, lik
         <View style={styles.userInfo}>
           {review.user?.images && review.user.images.length > 0 ? (
             <Image 
-              source={{ uri: getFullImageUrl(review.user.images[0]) }} // Corrected: use getFullImageUrl
+              source={{ uri: getFullImageUrl(review.user.images[0]) }}
               style={styles.userImage} 
             />
           ) : (

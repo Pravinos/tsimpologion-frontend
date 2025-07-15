@@ -100,27 +100,29 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 <MaterialCommunityIcons name="close" size={24} color={colors.darkGray} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Filter & Sort</Text>
-              <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Category</Text>
-                <View style={styles.buttonListRow}>
-                  <TouchableOpacity
-                    style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
-                    onPress={() => setSelectedCategory('')}
-                  >
-                    <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
-                  </TouchableOpacity>{categories.filter(cat => cat && cat.trim()).map((cat) => (
+              {categories.length > 0 && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.modalLabel}>Category</Text>
+                  <View style={styles.buttonListRow}>
                     <TouchableOpacity
-                      key={cat}
-                      style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
-                      onPress={() => setSelectedCategory(cat)}
+                      style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
+                      onPress={() => setSelectedCategory('')}
                     >
-                      <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
+                    </TouchableOpacity>{categories.filter(cat => cat && cat.trim()).map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
+                        onPress={() => setSelectedCategory(cat)}
+                      >
+                        <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
+              )}
               <View style={styles.filterSection}>
                 <View style={styles.labelInfoRow}>
                   <Text style={styles.modalLabel}>Price Range</Text>

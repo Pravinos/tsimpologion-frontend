@@ -110,33 +110,30 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     return 'Food Explorer';
   }, [userProfile]);
 
-  useEffect(() => {
-    // Set status bar style for ProfileScreen
-    StatusBar.setBarStyle('light-content');
-  }, []);
-
   if (isProfileLoading) return <LoadingState />;
   if (!token) return <NotLoggedInState navigation={navigation} />;
   if (isProfileError) return <ErrorState refetchProfile={refetchProfile} handleLogout={handleLogout} />;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <CustomStatusBar backgroundColor={colors.primary} barStyle="light-content" />
+      <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
       <View style={{flex: 1}}>
         <ScrollView style={styles.container} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
-          <View style={styles.headerShadow}>
-            <View style={styles.headerCard}>
-              <View style={styles.avatarContainer}>
-                {userProfile?.images && Array.isArray(userProfile.images) && userProfile.images.length > 0 ? (
-                  <Image 
-                    source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
-                    style={styles.avatar} 
-                  />
-                ) : (
-                  <Feather name="user" size={40} color={colors.white} />
-                )}
-              </View>
-              <Text style={styles.name}>{displayFullName}</Text>
+          <View style={styles.modernHeader}>
+            <View style={styles.avatarContainer}>
+              {userProfile?.images && Array.isArray(userProfile.images) && userProfile.images.length > 0 ? (
+                <Image 
+                  source={{ uri: getFullImageUrl(userProfile.images[0]) }} 
+                  style={styles.avatar} 
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Feather name="user" size={32} color={colors.primary} />
+                </View>
+              )}
+            </View>
+            <Text style={styles.name}>{displayFullName}</Text>
+            <View style={styles.roleContainer}>
               <Text style={styles.role}>{displayRole}</Text>
             </View>
           </View>
@@ -224,61 +221,71 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerShadow: {
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-    backgroundColor: 'transparent',
-  },
-  headerCard: {
-    backgroundColor: colors.primary,
+  modernHeader: {
+    backgroundColor: colors.white,
     alignItems: 'center',
-    paddingVertical: 36,
+    paddingVertical: 40,
     paddingHorizontal: 20,
+    marginTop: -10,
   },
   avatarContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+    backgroundColor: colors.backgroundWarm,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 2,
-    borderColor: colors.white,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: colors.primary,
   },
   avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: colors.primary,
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.08)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.black,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  roleContainer: {
+    backgroundColor: colors.backgroundWarm,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+
   },
   role: {
-    fontSize: 15,
-    color: colors.white,
-    opacity: 0.85,
-    marginBottom: 2,
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   infoSectionCard: {
     backgroundColor: colors.white,
     borderRadius: 18,
     marginHorizontal: 16,
-    marginTop: -24,
+    marginTop: -16,
     marginBottom: 16,
     padding: 20,
     shadowColor: colors.primary,

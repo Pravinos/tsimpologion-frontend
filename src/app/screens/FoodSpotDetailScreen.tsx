@@ -479,7 +479,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   if (isLoadingSpot && !foodSpot) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.lightGray} />
+        <CustomStatusBar backgroundColor={colors.lightGray} barStyle="dark-content" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading details...</Text>
@@ -492,7 +492,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   if (isSpotError) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.lightGray} />
+        <CustomStatusBar backgroundColor={colors.lightGray} barStyle="dark-content" />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load food spot details.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetchSpot()}>
@@ -507,7 +507,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
   if (!foodSpot) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.lightGray} />
+        <CustomStatusBar backgroundColor={colors.lightGray} barStyle="dark-content" />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Food spot not found.</Text>
         </View>
@@ -517,7 +517,7 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <CustomStatusBar backgroundColor={colors.lightGray} />
+      <CustomStatusBar backgroundColor={colors.lightGray} barStyle="dark-content" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

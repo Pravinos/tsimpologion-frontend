@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
   Image,
   Keyboard,
-  TouchableWithoutFeedback,
-  StatusBar
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Constants from 'expo-constants';
 
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
@@ -41,7 +42,6 @@ type ListType = 'popular' | 'favourites' | 'mySpots';
 // --- Helper Components ---
 const LoadingState = () => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Loading food spots...</Text>
@@ -167,10 +167,18 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     setListType(value as ListType);
   }, []);
 
-  // --- Focus Effect for StatusBar ---
+  // Force status bar to dark when HomeScreen is focused
   useFocusEffect(
     React.useCallback(() => {
-      StatusBar.setBarStyle('dark-content');
+      // Immediate update
+      setStatusBarStyle('dark');
+      
+      // One delayed update to ensure it sticks
+      const timer = setTimeout(() => setStatusBarStyle('dark'), 100);
+      
+      return () => {
+        clearTimeout(timer);
+      };
     }, [])
   );
 
@@ -182,7 +190,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
+        <View style={[styles.statusBar, { backgroundColor: colors.white }]} />
         <View style={styles.container}>
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>
@@ -372,6 +380,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
+  },
+  statusBar: {
+    height: Constants.statusBarHeight,
+    marginTop: -10
   },
 });
 

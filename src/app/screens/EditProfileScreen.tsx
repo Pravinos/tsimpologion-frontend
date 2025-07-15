@@ -250,14 +250,32 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <CustomStatusBar backgroundColor={colors.primary} />
+      <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
       <View style={{flex: 1}}>
         <KeyboardAvoidingView
           style={{flex: 1}}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <ScrollView style={styles.content} contentContainerStyle={{flexGrow: 1, paddingBottom: 32}} showsVerticalScrollIndicator={false}>
-            <AvatarSection selectedImage={selectedImage} onPickImage={handlePickImage} saving={saving} />
+            <View style={styles.modernHeader}>
+              <TouchableOpacity 
+                style={styles.avatarContainer}
+                onPress={handlePickImage}
+                disabled={saving}
+              >
+                {selectedImage ? (
+                  <Image source={{ uri: selectedImage }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Feather name="user" size={32} color={colors.primary} />
+                  </View>
+                )}
+                <View style={styles.cameraIconContainer}>
+                  <Feather name="camera" size={16} color={colors.white} />
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.editHint}>Tap to change photo</Text>
+            </View>
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
               <View style={styles.inputGroup}>
@@ -376,7 +394,67 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 0, // Remove extra padding
+    paddingHorizontal: 0,
+  },
+  modernHeader: {
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    position: 'relative',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+    backgroundColor: colors.backgroundWarm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    borderRadius: 15,
+    padding: 8,
+    borderWidth: 2,
+    borderColor: colors.white,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  editHint: {
+    fontSize: 14,
+    color: colors.darkGray,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   section: {
     backgroundColor: colors.white,
@@ -479,29 +557,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.13,
     shadowRadius: 8,
     elevation: 3,
-  },
-  avatar: {
-    width: 106,
-    height: 106,
-    borderRadius: 53,
-  },
-  cameraIconContainer: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatarHint: {
-    fontSize: 13,
-    color: colors.white,
-    marginBottom: 8,
   },
 });
 

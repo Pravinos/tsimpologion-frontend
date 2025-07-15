@@ -12,6 +12,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
 import EditFoodSpotScreen from '../screens/EditFoodSpotScreen';
+import CategorizedFoodSpotsScreen from '../screens/CategorizedFoodSpotsScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
 import { useAuth } from '@/services/AuthProvider';
@@ -109,6 +110,21 @@ function MainStack() {
       <Stack.Screen 
         name="EditFoodSpot" 
         component={EditFoodSpotScreen} 
+        options={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          contentStyle: {
+            backgroundColor: colors.white,
+          }
+        }} 
+      />
+
+      {/* CategorizedFoodSpots screen */}
+      <Stack.Screen 
+        name="CategorizedFoodSpots" 
+        component={CategorizedFoodSpotsScreen} 
         options={{ 
           headerShown: false,
           animation: 'slide_from_right',

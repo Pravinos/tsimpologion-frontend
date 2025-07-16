@@ -31,6 +31,8 @@ export interface FoodSpot {
   user_id?: number; // Added user_id property
   reviews_count?: number;
   average_rating?: string;
+  created_at?: string;
+  updated_at?: string;
   user?: User;
   images?: {
     id: number;

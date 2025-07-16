@@ -2,14 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { getFoodSpots, getFavourites, getUserFoodSpots } from '@/services/ApiClient';
 import { FoodSpot } from '@/app/types/appTypes';
 import { useAuth } from '@/services/AuthProvider';
+import { sortForTrending } from '@/app/utils/trendingUtils';
 
-type ListType = 'popular' | 'favourites' | 'mySpots';
+type ListType = 'trending' | 'all' | 'favourites' | 'mySpots';
 
 export const useFoodSpots = (listType: ListType) => {
   const { user } = useAuth();
 
   const {
-    data: foodSpots = [],
+    data: allFoodSpots = [],
     isLoading: loadingFoodSpots,
     isError: isFoodSpotsError,
     refetch: refetchFoodSpots,
@@ -21,7 +22,7 @@ export const useFoodSpots = (listType: ListType) => {
       return response.data?.data || response.data || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: listType === 'popular',
+    enabled: listType === 'all' || listType === 'trending',
   });
 
   const {
@@ -77,8 +78,19 @@ export const useFoodSpots = (listType: ListType) => {
     };
   }
 
+  if (listType === 'trending') {
+    return {
+      data: sortForTrending(allFoodSpots),
+      isLoading: loadingFoodSpots,
+      isError: isFoodSpotsError,
+      isFetching: isFetchingFoodSpots,
+      refetch: refetchFoodSpots,
+    };
+  }
+
+  // Default case for 'all'
   return {
-    data: foodSpots,
+    data: allFoodSpots,
     isLoading: loadingFoodSpots,
     isError: isFoodSpotsError,
     isFetching: isFetchingFoodSpots,

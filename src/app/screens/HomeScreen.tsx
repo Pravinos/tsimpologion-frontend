@@ -37,7 +37,7 @@ const SORT_OPTIONS = [
   { label: 'Lowest First', value: 'asc' },
 ];
 
-type ListType = 'popular' | 'favourites' | 'mySpots';
+type ListType = 'trending' | 'all' | 'favourites' | 'mySpots';
 
 // --- Helper Components ---
 const LoadingState = () => (
@@ -52,7 +52,7 @@ const LoadingState = () => (
 const ErrorState = ({ listType, refetch }: { listType: ListType; refetch: () => void }) => (
   <View style={styles.errorContainer}>
     <Text style={styles.errorText}>
-      Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
+      Failed to load {listType === 'favourites' ? 'favourites' : listType === 'trending' ? 'trending spots' : 'food spots'}. Please try again.
     </Text>
     <TouchableOpacity style={styles.retryButton} onPress={refetch}>
       <Text style={styles.retryText}>Try Again</Text>
@@ -71,14 +71,18 @@ const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; i
           ? "You haven't saved any favorites yet" 
           : listType === 'mySpots' 
             ? "You haven't added any food spots yet"
-            : "No food spots found"}
+            : listType === 'trending'
+              ? "No trending spots found"
+              : "No food spots found"}
       </Text>
       <Text style={styles.emptySubText}>
         {listType === 'favourites' 
-          ? "Browse popular spots and tap the heart icon to add them to your favorites"
+          ? "Browse trending spots and tap the heart icon to add them to your favorites"
           : listType === 'mySpots'
             ? "Add your first food spot to get started!"
-            : "Try adjusting your filters or search keywords."}
+            : listType === 'trending'
+              ? "Trending spots are based on recent reviews and ratings. Check back later or explore all spots."
+              : "Try adjusting your filters or search keywords."}
       </Text>
     </View>
   );
@@ -88,10 +92,11 @@ const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; i
 const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
 
-  // Memoized list options
+  // Memoized list options - Updated to include Trending and All Spots
   const LIST_OPTIONS = useMemo(() => {
     const options = [
-      { label: 'Popular', value: 'popular' as ListType },
+      { label: 'Trending', value: 'trending' as ListType }, // Shows spots with high engagement and quality scores
+      { label: 'All Spots', value: 'all' as ListType }, // Shows all available food spots
       { label: 'Favourites', value: 'favourites' as ListType },
     ];
     if (user?.role === 'spot_owner') {
@@ -100,8 +105,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     return options;
   }, [user]);
 
-  // UI state
-  const [listType, setListType] = useState<ListType>('popular');
+  // UI state - Default to trending to showcase the best spots first
+  const [listType, setListType] = useState<ListType>('trending');
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -307,9 +312,8 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
   },
   listTypeSelectorContainer: {
-    marginTop: 6,
-    marginBottom: 6,
-    paddingHorizontal: 5,
+    marginVertical: 10,
+    width: '100%',
   },
   listContent: {
     paddingBottom: 20,

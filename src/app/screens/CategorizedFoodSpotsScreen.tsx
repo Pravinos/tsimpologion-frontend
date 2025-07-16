@@ -149,7 +149,7 @@ const CategorizedFoodSpotsScreen: React.FC<CategorizedFoodSpotsScreenProps> = ()
   const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>('');
 
   // Query for food spots using the same hook as HomeScreen
-  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots('popular');
+  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots('all');
 
   // Sort options for the filter modal
   const sortOptions = [

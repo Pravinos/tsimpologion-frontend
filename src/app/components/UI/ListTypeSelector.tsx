@@ -18,7 +18,8 @@ const AnimatedPill: React.FC<{
   label: string;
   selected: boolean;
   onPress: () => void;
-}> = ({ label, selected, onPress }) => {
+  optionCount?: number;
+}> = ({ label, selected, onPress, optionCount = 3 }) => {
   const scale = useSharedValue(selected ? 1.08 : 1);
 
   useEffect(() => {
@@ -29,6 +30,24 @@ const AnimatedPill: React.FC<{
     transform: [{ scale: scale.value }],
     backgroundColor: selected ? colors.primary : colors.white,
   }));
+
+  // Add appropriate emoji for each option
+  const getDisplayLabel = (label: string) => {
+    switch (label) {
+      case 'Trending':
+        return '🔥 Trending';
+      case 'All Spots':
+        return '🍽️ All Spots';
+      case 'Favourites':
+        return '❤️ Favourites';
+      case 'My Spots':
+        return '👤 My Spots';
+      default:
+        return label;
+    }
+  };
+
+  const displayLabel = getDisplayLabel(label);
 
   return (
     <TouchableOpacity
@@ -47,7 +66,7 @@ const AnimatedPill: React.FC<{
           styles.optionButtonText,
           selected && styles.optionButtonTextSelected
         ]}>
-          {label}
+          {displayLabel}
         </Text>
       </Animated.View>
     </TouchableOpacity>
@@ -59,6 +78,10 @@ const ListTypeSelector: React.FC<ListTypeSelectorProps> = ({
   selectedValue, 
   onSelect 
 }) => {
+  // Calculate the flex value based on number of options
+  // This ensures the buttons scale appropriately whether there are 3 or 4 options
+  const optionCount = options.length;
+  
   return (
     <View style={styles.container}>
       {options.map(opt => (
@@ -67,6 +90,7 @@ const ListTypeSelector: React.FC<ListTypeSelectorProps> = ({
           label={opt.label}
           selected={selectedValue === opt.value}
           onPress={() => onSelect(opt.value)}
+          optionCount={optionCount}
         />
       ))}
     </View>
@@ -77,20 +101,24 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     marginBottom: 12,
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 2,
   },
   touchableContainer: {
-    marginRight: 12,
+    flex: 1,
+    marginHorizontal: 6,
   },
   optionButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.08)',
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 40,
+    width: '100%',
   },
   optionButtonSelected: {
     borderColor: colors.primary,
@@ -110,7 +138,8 @@ const styles = StyleSheet.create({
   optionButtonText: {
     color: colors.darkGray,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
+    textAlign: 'center',
   },
   optionButtonTextSelected: {
     color: colors.white,

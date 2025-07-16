@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 12.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "production": {
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  },
+  "update": {
+    "development": {
+      "channel": "development",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    "production": {
+      "channel": "main",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

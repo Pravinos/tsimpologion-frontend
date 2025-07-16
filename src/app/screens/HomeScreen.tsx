@@ -23,14 +23,14 @@ import { useFoodSpots } from '@/app/hooks/useFoodSpots';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
-import { FilterModal, SearchBar, ListTypeSelector, CustomStatusBar } from '@/app/components/UI';
+import { FilterModal, SearchBar, ListTypeSelector } from '@/app/components/UI';
 
 // Utilities and styles
 import colors from '../styles/colors';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 
 // Types
-import { FoodSpot, ScreenProps } from '../types/appTypes';
+import { FoodSpot } from '../types/appTypes';
 
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
@@ -89,7 +89,7 @@ const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; i
 };
 
 // --- Main Component ---
-const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
+const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
 
   // Memoized list options - Updated to include Trending and All Spots
@@ -200,7 +200,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>
               <Text style={styles.welcome}>
-                {user && user.username ? `Hi ${user.username} 👋` : 'Hi 👋'}
+                {user?.username ? `Hi ${user.username} 👋` : 'Hi 👋'}
               </Text>
               <Text style={styles.title}>Find the perfect spot</Text>
               <Text style={styles.subtitle}>Explore authentic flavors near you</Text>
@@ -209,7 +209,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               style={styles.profileButton}
               onPress={() => navigation.navigate('Profile')}
             >
-              {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
+              {(user && Array.isArray(user.images) && user.images.length > 0 && getFullImageUrl(user.images[0])) ? (
                 <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={styles.profileImage} />
               ) : (
                 <Feather name="user" size={24} color={colors.white} />
@@ -221,7 +221,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             setSearchText={setSearchText}
             onFilterPress={() => setFilterModalVisible(true)}
             suggestions={spotSuggestions}
-            onSelectSuggestion={(name) => setSearchText(name)}
+            onSelectSuggestion={setSearchText}
           />
           <View style={styles.listTypeSelectorContainer}>
             <ListTypeSelector
@@ -241,9 +241,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               contentContainerStyle={styles.listContent}
               refreshing={isFetching}
               onRefresh={handleRefresh}
-              ListEmptyComponent={
-                isError ? null : <EmptyState listType={listType} isLoading={isLoading} isFetching={isFetching} />
-              }
+              ListEmptyComponent={<EmptyState listType={listType} isLoading={isLoading} isFetching={isFetching} />}
             />
           )}
           <FilterModal
@@ -372,18 +370,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
-  },
-  section: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    marginHorizontal: 13,
-    marginBottom: 18,
-    padding: 20,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
   },
   statusBar: {
     height: Constants.statusBarHeight,

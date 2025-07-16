@@ -130,9 +130,7 @@ const EmptyState = ({ category, isLoading, isFetching }: { category: string; isL
   );
 };
 
-interface CategorizedFoodSpotsScreenProps {}
-
-const CategorizedFoodSpotsScreen: React.FC<CategorizedFoodSpotsScreenProps> = () => {
+function CategorizedFoodSpotsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { category } = route.params as { category: string };

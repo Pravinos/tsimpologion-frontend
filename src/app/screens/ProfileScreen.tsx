@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
@@ -7,18 +7,16 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image,
-  StatusBar
+  Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-
 import colors from '../styles/colors';
 import { useAuth } from '@/services/AuthProvider';
 import { useUserProfile } from '@/app/hooks/useUserProfile';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { CustomStatusBar } from '../components/UI';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 // --- Helper Components ---
 const LoadingState = () => (
@@ -64,7 +62,7 @@ const ErrorState = ({ refetchProfile, handleLogout }: { refetchProfile: () => vo
 );
 
 // --- Main Component ---
-const ProfileScreen = ({ navigation }: { navigation: any }) => {
+function ProfileScreen({ navigation }: { navigation: any }) {
   const { user: authUser, token, logout } = useAuth();
   const queryClient = useQueryClient();
   const { 
@@ -88,27 +86,23 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
   }, [logout, queryClient, token]);
 
   // Memoized derived values
-  const displayFullName = React.useMemo(() => {
-    if (userProfile?.first_name || userProfile?.last_name) {
-      return `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim();
-    }
-    return 'N/A';
-  }, [userProfile]);
-  const displayUsername = React.useMemo(() => userProfile?.username || 'N/A', [userProfile]);
-  const displayPhone = React.useMemo(() => userProfile?.phone || null, [userProfile]);
-  const displayEmail = React.useMemo(() => userProfile?.email || authUser?.email || 'No email', [userProfile, authUser]);
-  const displayJoinDate = React.useMemo(() => userProfile?.created_at 
-    ? new Date(userProfile.created_at).toLocaleDateString() 
-    : 'N/A', [userProfile]);
-  const displayReviewsCount = React.useMemo(() => userReviews.length || 0, [userReviews]);
-  const displayRole = React.useMemo(() => {
-    if (userProfile?.role) {
-      if (userProfile.role === 'foodie') return 'Foodie';
-      if (userProfile.role === 'spot_owner') return 'Owner';
-      if (userProfile.role === 'admin') return 'Administrator';
-    }
-    return 'Food Explorer';
-  }, [userProfile]);
+  const displayFullName = userProfile?.first_name || userProfile?.last_name
+    ? `${userProfile?.first_name || ''} ${userProfile?.last_name || ''}`.trim()
+    : 'N/A';
+  const displayUsername = userProfile?.username || 'N/A';
+  const displayPhone = userProfile?.phone || null;
+  const displayEmail = userProfile?.email || authUser?.email || 'No email';
+  const displayJoinDate = userProfile?.created_at
+    ? new Date(userProfile.created_at).toLocaleDateString()
+    : 'N/A';
+  const displayReviewsCount = userReviews.length || 0;
+  const displayRole = userProfile?.role === 'foodie'
+    ? 'Foodie'
+    : userProfile?.role === 'spot_owner'
+      ? 'Owner'
+      : userProfile?.role === 'admin'
+        ? 'Administrator'
+        : 'Food Explorer';
 
   if (isProfileLoading) return <LoadingState />;
   if (!token) return <NotLoggedInState navigation={navigation} />;

@@ -40,13 +40,39 @@ You can find the backend [here](https://github.com/Pravinos/tsimpologion-backend
 
 2. **Start the app**
 
+   **Development Environment (default):**
+   ```powershell
+   $env:NODE_ENV="development"; npx expo start --clear
+   ```
+
+   **Production Environment:**
+   ```powershell
+   $env:NODE_ENV="production"; npx expo start --clear
+   ```
+
+   **Standard start (uses default .env):**
    ```bash
    npx expo start
    ```
 
    Then choose to open in a development build, Android emulator, iOS simulator, or [Expo Go](https://expo.dev/go).
 
-3. **Develop**
+3. **Environment Configuration**
+
+   The app uses different environment files:
+   - `.env.development` - Development API endpoints
+   - `.env.production` - Production API endpoints
+
+   When you set `NODE_ENV`, the app automatically loads the corresponding environment file.
+
+4. **Production Updates**
+
+   To push updates to production using EAS:
+   ```bash
+   eas update --branch main
+   ```
+
+5. **Develop**
 
    Edit files in the `app` directory. Routing is file-based ([docs](https://docs.expo.dev/router/introduction/)).
 

@@ -17,7 +17,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { getFoodSpot, updateFoodSpot, uploadImage, deleteImage } from '@/services/ApiClient';
 import { FoodSpot } from '../types/appTypes';
 import colors from '../styles/colors';
-import { ScreenProps } from '../types/appTypes';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { CustomStatusBar } from '../components/UI';
 
@@ -33,7 +32,7 @@ interface SocialLink {
   url: string;
 }
 
-const EditFoodSpotScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
+function EditFoodSpotScreen({ route, navigation }: any) {
   if (!route || !route.params) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>

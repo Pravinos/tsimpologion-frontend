@@ -130,9 +130,7 @@ const EmptyState = ({ category, isLoading, isFetching }: { category: string; isL
   );
 };
 
-interface CategorizedFoodSpotsScreenProps {}
-
-const CategorizedFoodSpotsScreen: React.FC<CategorizedFoodSpotsScreenProps> = () => {
+function CategorizedFoodSpotsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { category } = route.params as { category: string };
@@ -149,7 +147,7 @@ const CategorizedFoodSpotsScreen: React.FC<CategorizedFoodSpotsScreenProps> = ()
   const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>('');
 
   // Query for food spots using the same hook as HomeScreen
-  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots('popular');
+  const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots('all');
 
   // Sort options for the filter modal
   const sortOptions = [

@@ -1,15 +1,13 @@
 // filepath: c:\tsimpologion-app\tsimpologion-frontend\app\screens\FoodSpotDetailScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { ScrollView } from 'react-native';
 import {
+  ScrollView,
   View,
   Text,
   StyleSheet,
   Alert,
-  Share,
   TouchableOpacity,
-  Linking,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView
@@ -40,7 +38,6 @@ import { useQuery, useQueryClient, useMutation, keepPreviousData } from '@tansta
 import { getFullImageUrl } from '@/app/utils/getFullImageUrl';
 import { useBusinessHours } from '@/app/hooks/useBusinessHours';
 import { parseSocialLinks } from '@/app/utils/parseSocialLinks';
-import { uploadMultipleImages } from '@/app/utils/uploadUtils';
 import { uploadReviewImages, handleReviewImageUpdates } from '@/app/utils/reviewUtils';
 
 // API client
@@ -58,7 +55,7 @@ import {
 } from '@/services/ApiClient';
 
 // Types
-import { ScreenProps, Review, FoodSpot } from '@/app/types/appTypes';
+import { Review, FoodSpot } from '@/app/types/appTypes';
 import colors from '@/app/styles/colors';
 
 // Define FoodSpotDetailParams interface
@@ -67,13 +64,11 @@ interface FoodSpotDetailParams {
   id: number;
 }
 
-// Define review sort orders
-const SORT_RECENT = 'recent';
-const SORT_LIKED = 'liked';
+// ...existing code...
 
-const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
-  if (!route) return null; // Add a guard for the route
-  const { foodSpot: initialFoodSpot } = route.params as unknown as FoodSpotDetailParams;
+const FoodSpotDetailScreen = ({ route, navigation }: any) => {
+  if (!route) return null;
+  const { foodSpot: initialFoodSpot } = route.params as FoodSpotDetailParams;
   const id = initialFoodSpot.id;
   const { token, user } = useAuth();
   const queryClient = useQueryClient();
@@ -463,18 +458,14 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
     }
   };
 
-  const handleViewAllImages = () => {
-    if (foodSpot) {
-      (navigation.navigate as any)('Gallery', { foodSpotId: foodSpot.id });
-    }
-  };
+  // Removed unused handleViewAllImages
 
   useEffect(() => {
-    if ((route.params as any)?.scrollToReviews && scrollViewRef.current) {
+    if (route?.params?.scrollToReviews && scrollViewRef.current) {
       const yOffset = 500; // Approximate position of reviews section
       scrollViewRef.current.scrollTo({ y: yOffset, animated: true });
     }
-  }, [(route.params as any)?.scrollToReviews, userHasReview, foodSpot, reviewsResult]);
+  }, [route?.params?.scrollToReviews, userHasReview, foodSpot, reviewsResult]);
 
   if (isLoadingSpot && !foodSpot) {
     return (
@@ -613,12 +604,12 @@ const FoodSpotDetailScreen: React.FC<ScreenProps> = ({ route, navigation }) => {
           </View>
         </ScrollView>
         {user?.role === 'spot_owner' && user?.id === (foodSpot?.user?.id || foodSpot?.user_id || foodSpot?.owner_id) && (
-            <TouchableOpacity 
-                style={styles.fab}
-                onPress={() => navigation.navigate('EditFoodSpot', { foodSpotId: foodSpot.id })}
-            >
-                <MaterialCommunityIcons name="pencil-outline" size={24} color={colors.white} />
-            </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.fab}
+            onPress={() => navigation.navigate('EditFoodSpot', { foodSpotId: foodSpot.id })}
+          >
+            <MaterialCommunityIcons name="pencil-outline" size={24} color={colors.white} />
+          </TouchableOpacity>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -650,7 +641,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   reviewsCard: {
-    padding: 0, // Remove padding to allow subsections to control it
+    padding: 0,
   },
   subSection: {
     padding: 20,
@@ -720,38 +711,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-  },
-  businessHoursRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  businessHourPill: {
-    backgroundColor: colors.lightGray,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 6,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  businessHourPillOpen: {
-    backgroundColor: colors.primary,
-  },
-  businessHourPillClosed: {
-    backgroundColor: colors.error,
-  },
-  businessHourPillText: {
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  businessHourPillOpenText: {
-    color: colors.white,
-  },
-  businessHourPillClosedText: {
-    color: colors.white,
   },
 });
 

@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 import StarRating from '../UI/StarRating';
+
 import { getIconForCategory } from '../../utils/categoryIcons';
 
-const FoodSpotItem = ({ item, onPress }) => {
+const FoodSpotItem = ({ item, onPress, showTrendingBadge = false }) => {
   const scale = useRef(new RNAnimated.Value(1)).current;
 
   const handlePressIn = () => {

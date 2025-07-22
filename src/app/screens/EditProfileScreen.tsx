@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { API_BASE_URL } from '@/services/ApiClient';
+// import { API_BASE_URL } from '@/services/ApiClient'; // Removed unused import
 import {
   StyleSheet,
   View,
@@ -22,8 +22,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import ModernButton from '../components/UI/ModernButton';
 import { CustomStatusBar } from '../components/UI';
-import AvatarSection from '../components/Profile/AvatarSection';
-import PersonalInfoSection from '../components/Profile/PersonalInfoSection';
+// import AvatarSection from '../components/Profile/AvatarSection'; // Removed unused import
+// import PersonalInfoSection from '../components/Profile/PersonalInfoSection'; // Removed unused import
 import PasswordSection from '../components/Profile/PasswordSection';
 import { uploadImage as uploadImageUtil } from '../utils/uploadUtils';
 
@@ -38,14 +38,7 @@ interface FormErrors {
   confirmPassword?: string;
 }
 
-interface UpdateData {
-  name: string;
-  email: string;
-  current_password?: string;
-  password?: string;
-  password_confirmation?: string;
-  images?: string[]; // Backend expects array, not string
-}
+// interface UpdateData { ... } // Removed unused interface
 
 // --- Helper Components ---
 const LoadingState = () => (

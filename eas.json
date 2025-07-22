@@ -13,26 +13,12 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "NODE_ENV": "production"
-      }
-    },
-    "production": {
-      "env": {
-        "NODE_ENV": "production"
-      }
-    }
-  },
-  "update": {
-    "development": {
-      "channel": "development",
-      "env": {
         "NODE_ENV": "development"
       }
     },
     "production": {
-      "channel": "main",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "development"
       }
     }
   },

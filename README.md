@@ -120,6 +120,15 @@ You can try out Tsimpologion right now on your mobile device!
 - [Expo on GitHub](https://github.com/expo/expo)
 - [Expo Discord](https://chat.expo.dev)
 
+## License
+
+This project is provided for **portfolio and demonstration purposes only**.
+
+All rights are reserved.  
+You may **view the source code**, but you are **not permitted** to copy, modify, reuse, or distribute any part of it without explicit permission from the author.
+
+For licensing inquiries, contact [tpravinos99@gmail.com](mailto:tpravinos99@gmail.com).
+
 ## Contact
 Built by Thomas Pravinos.  
 Reach me at: tpravinos99@gmail.com or [GitHub](https://github.com/Pravinos).

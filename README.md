@@ -53,7 +53,7 @@ Key screens in Tsimpologion:
 
 Screenshots:
 
-| Login | Home | Food Spot |
+| Login | Food Spot | Home |
 |:-----:|:-----:|:---------:|
 | <img src="src/assets/README/IMG_4036.PNG" alt="Login" width="180"/> | <img src="src/assets/README/IMG_4031.PNG" alt="Home" width="180"/> | <img src="src/assets/README/IMG_4032.PNG" alt="Detail" width="180"/> |
 

@@ -80,13 +80,13 @@ export type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   EditFoodSpot: { foodSpotId: number };
+  AddFoodSpot: undefined;
   Login: undefined;
   Register: undefined;
   Auth: undefined;
   App: undefined;
   HomeTabs: undefined;
   MySpots: undefined;
-  AddFoodSpot: undefined;
 };
 
 export type NavigationProps = NavigationProp<RootStackParamList>;

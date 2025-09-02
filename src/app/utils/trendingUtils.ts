@@ -31,14 +31,16 @@ export const calculateTrendingScore = (spot: FoodSpot): number => {
     }
   }
   
-  // Quality threshold - spots need either:
-  // 1. At least 2 reviews with 3.5+ rating, OR
-  // 2. At least 4.0+ rating (even with few reviews), OR  
-  // 3. At least 5 reviews (regardless of rating)
+  // Updated quality threshold - more lenient to work with current data:
+  // 1. At least 2 reviews with 3.0+ rating, OR
+  // 2. At least 3.5+ rating (even with few/no reviews), OR  
+  // 3. At least 3 reviews (regardless of rating), OR
+  // 4. Fallback: any spot with a rating (to ensure seeded data shows up)
   const meetsQualityThreshold = 
-    (reviewCount >= 2 && rating >= 3.5) ||
-    (rating >= 4.0) ||
-    (reviewCount >= 5);
+    (reviewCount >= 2 && rating >= 3.0) ||
+    (rating >= 3.5) ||
+    (reviewCount >= 3) ||
+    (rating > 0); // Fallback for seeded data
   
   if (!meetsQualityThreshold) return 0;
   
@@ -60,7 +62,7 @@ export const sortForTrending = (spots: FoodSpot[]): FoodSpot[] => {
     .map(spot => ({ ...spot, trendingScore: calculateTrendingScore(spot) }))
     .filter(spot => spot.trendingScore > 0)
     .sort((a, b) => b.trendingScore - a.trendingScore)
-    .slice(0, 20);
+    .slice(0, 50); // Increased from 20 to 50 to show more spots when dataset is small
 };
 
 export default {

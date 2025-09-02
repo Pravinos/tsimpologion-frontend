@@ -603,7 +603,12 @@ const FoodSpotDetailScreen = ({ route, navigation }: any) => {
             </Animated.View>
           </View>
         </ScrollView>
-        {user?.role === 'spot_owner' && user?.id === (foodSpot?.user?.id || foodSpot?.user_id || foodSpot?.owner_id) && (
+        {(
+          // Allow spot owners to edit their own spots
+          (user?.role === 'spot_owner' && user?.id === (foodSpot?.user?.id || foodSpot?.user_id || foodSpot?.owner_id)) ||
+          // Allow admins to edit all spots
+          user?.role === 'admin'
+        ) && (
           <TouchableOpacity 
             style={styles.fab}
             onPress={() => navigation.navigate('EditFoodSpot', { foodSpotId: foodSpot.id })}

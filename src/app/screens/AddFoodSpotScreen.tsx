@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,13 +11,11 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { getFoodSpot, updateFoodSpot, uploadImage, deleteImage, deleteFoodSpot } from '@/services/ApiClient';
-import { FoodSpot } from '../types/appTypes';
+import { createFoodSpot, uploadImage } from '@/services/ApiClient';
 import colors from '../styles/colors';
-import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { CustomStatusBar } from '../components/UI';
 
 interface BusinessHour {
@@ -32,24 +30,8 @@ interface SocialLink {
   url: string;
 }
 
-function EditFoodSpotScreen({ route, navigation }: any) {
-  if (!route || !route.params) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Invalid navigation state.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  const { foodSpotId } = route.params as { foodSpotId: number };
+function AddFoodSpotScreen({ navigation }: any) {
   const queryClient = useQueryClient();
-
-  const { data: foodSpot, isLoading, isError } = useQuery<FoodSpot>({
-    queryKey: ['foodSpot', foodSpotId],
-    queryFn: () => getFoodSpot(foodSpotId).then(res => res.data.data || res.data),
-  });
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -61,62 +43,43 @@ function EditFoodSpotScreen({ route, navigation }: any) {
   const [priceRange, setPriceRange] = useState('');
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-  const [existingImages, setExistingImages] = useState<any[]>([]);
   const [newImages, setNewImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
-  const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const [permission, requestPermission] = ImagePicker.useMediaLibraryPermissions();
 
-  useEffect(() => {
-    if (foodSpot) {
-      setName(foodSpot.name);
-      setCategory(foodSpot.category);
-      setCity(foodSpot.city);
-      setAddress(foodSpot.address);
-      setDescription(foodSpot.description);
-      setInfoLink(foodSpot.info_link);
-      setPhone(foodSpot.phone || '');
-      setPriceRange(foodSpot.price_range || '');
-      setExistingImages(foodSpot.images || []);
-      if (foodSpot.business_hours) {
-        try {
-          const parsedHours = typeof foodSpot.business_hours === 'string'
-            ? JSON.parse(foodSpot.business_hours)
-            : foodSpot.business_hours;
-          const hoursArray = Object.entries(parsedHours).map(([dayRange, timeRange], index) => ({
-            id: index,
-            dayRange: dayRange,
-            timeRange: timeRange as string,
-          }));
-          setBusinessHours(hoursArray);
-        } catch (e) {
-          console.error("Failed to parse business hours:", e);
-          setBusinessHours([]);
-        }
-      }
-      if (foodSpot.social_links) {
-        try {
-          const parsedLinks = typeof foodSpot.social_links === 'string'
-            ? JSON.parse(foodSpot.social_links)
-            : foodSpot.social_links;
-          const linksArray = Object.entries(parsedLinks).map(([platform, url], index) => ({
-            id: index,
-            platform: platform,
-            url: url as string,
-          }));
-          setSocialLinks(linksArray);
-        } catch (e) {
-          console.error("Failed to parse social links:", e);
-          setSocialLinks([]);
-        }
-      }
+  const handleCreate = async () => {
+    // Validation
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Please enter a name for the food spot.');
+      return;
     }
-  }, [foodSpot]);
+    if (!category.trim()) {
+      Alert.alert('Validation Error', 'Please enter a category.');
+      return;
+    }
+    if (!city.trim()) {
+      Alert.alert('Validation Error', 'Please enter a city.');
+      return;
+    }
+    if (!address.trim()) {
+      Alert.alert('Validation Error', 'Please enter an address.');
+      return;
+    }
+    // Validate according to backend rules
+    if (infoLink.length > 500) {
+      Alert.alert('Validation Error', 'Info link must be 500 characters or less');
+      return;
+    }
+    
+    // Validate price range if provided - backend accepts €, €€, €€€, €€€€
+    const validPriceRanges = ['€', '€€', '€€€', '€€€€'];
+    if (priceRange.trim() && !validPriceRanges.includes(priceRange.trim())) {
+      Alert.alert('Validation Error', 'Price range must be €, €€, €€€, or €€€€');
+      return;
+    }
 
-  const handleUpdate = async () => {
-    setIsUpdating(true);
+    setIsCreating(true);
 
     const businessHoursObject = businessHours.reduce((acc, curr) => {
       if (curr.dayRange) {
@@ -132,36 +95,45 @@ function EditFoodSpotScreen({ route, navigation }: any) {
         if (sanitizedUrl.startsWith('https://https://')) {
           sanitizedUrl = sanitizedUrl.substring(8);
         }
+        // Add https:// if no protocol is specified
+        if (sanitizedUrl && !sanitizedUrl.startsWith('http://') && !sanitizedUrl.startsWith('https://')) {
+          sanitizedUrl = 'https://' + sanitizedUrl;
+        }
         acc[curr.platform] = sanitizedUrl;
       }
       return acc;
     }, {} as Record<string, string>);
 
-    const updatedData: Partial<FoodSpot> = {
+    const newFoodSpotData = {
       name,
       category,
       city,
       address,
-      description,
-      info_link: infoLink,
-      phone,
-      price_range: priceRange,
-      business_hours: businessHoursObject,
-      social_links: socialLinksObject,
+      // Send empty strings for now until database is updated
+      description: description.trim() || '',
+      info_link: infoLink.trim() || '',
+      // Only include phone if it has content (nullable)
+      ...(phone.trim() && { phone }),
+      // Include price_range if provided (nullable)
+      ...(priceRange.trim() && { price_range: priceRange.trim() }),
+      // Only include business_hours if there are any valid entries (nullable)
+      ...(Object.keys(businessHoursObject).length > 0 && { business_hours: businessHoursObject }),
+      // Only include social_links if there are any valid entries (nullable)
+      ...(Object.keys(socialLinksObject).length > 0 && { social_links: socialLinksObject }),
     };
 
-    console.log('Updating food spot with data:', JSON.stringify(updatedData, null, 2));
+    console.log('Creating food spot with data:', JSON.stringify(newFoodSpotData, null, 2));
 
     try {
-      // 1. Update text data
-      await updateFoodSpot(foodSpotId, updatedData);
+      // 1. Create the food spot
+      const response = await createFoodSpot(newFoodSpotData);
+      const createdSpotId = response.data?.data?.id || response.data?.id;
 
-      // 2. Delete images
-      if (imagesToDelete.length > 0) {
-        await Promise.all(imagesToDelete.map(imageId => deleteImage('food-spots', foodSpotId, imageId)));
+      if (!createdSpotId) {
+        throw new Error('Failed to get created food spot ID');
       }
 
-      // 3. Upload new images
+      // 2. Upload images if any
       if (newImages.length > 0) {
         const formData = new FormData();
         newImages.forEach(image => {
@@ -181,15 +153,18 @@ function EditFoodSpotScreen({ route, navigation }: any) {
           // @ts-ignore
           formData.append('images[]', { uri, type: fileType, name: fileName });
         });
-        await uploadImage('food-spots', foodSpotId, formData);
+        await uploadImage('food-spots', createdSpotId, formData);
       }
 
-      // 4. Invalidate queries and show success
-      await queryClient.invalidateQueries({ queryKey: ['foodSpot', foodSpotId] });
-      await queryClient.invalidateQueries({ queryKey: ['spotImages', foodSpotId] });
+      // 3. Invalidate queries and show success
+      await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
       await queryClient.invalidateQueries({ queryKey: ['mySpots'] });
-      Alert.alert('Success', 'Food spot updated successfully.');
-      navigation.goBack();
+      Alert.alert('Success', 'Food spot created successfully.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
 
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.errors) {
@@ -197,48 +172,15 @@ function EditFoodSpotScreen({ route, navigation }: any) {
         const errors = error.response.data.errors;
         const errorMessages = Object.values(errors).flat().join('\n');
         console.error('Validation Errors:', JSON.stringify(errors, null, 2));
-        Alert.alert('Update Failed', `Please check the following fields:\n${errorMessages}`);
+        Alert.alert('Creation Failed', `Please check the following fields:\n${errorMessages}`);
       } else {
         // Handle other errors
-        console.error('Update Error:', error.response?.data || error.message);
+        console.error('Creation Error:', error.response?.data || error.message);
         Alert.alert('Error', error.message || 'An unexpected error occurred.');
       }
     } finally {
-      setIsUpdating(false);
+      setIsCreating(false);
     }
-  };
-
-  const handleDelete = async () => {
-    Alert.alert(
-      'Delete Food Spot',
-      'Are you sure you want to delete this food spot? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              await deleteFoodSpot(foodSpotId);
-              await queryClient.invalidateQueries({ queryKey: ['foodSpots'] });
-              await queryClient.invalidateQueries({ queryKey: ['mySpots'] });
-              Alert.alert('Success', 'Food spot deleted successfully.');
-              // Navigate to home screen instead of going back
-              navigation.navigate('HomeTabs', { screen: 'Home' });
-            } catch (error: any) {
-              console.error('Delete Error:', error.response?.data || error.message);
-              Alert.alert('Error', 'Failed to delete food spot. Please try again.');
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleBusinessHourChange = (id: number, field: 'dayRange' | 'timeRange', value: string) => {
@@ -279,11 +221,6 @@ function EditFoodSpotScreen({ route, navigation }: any) {
     setNewImages(prev => prev.filter(img => img.uri !== uri));
   };
 
-  const handleRemoveExistingImage = (imageId: number) => {
-    setExistingImages(prev => prev.filter(img => img.id !== imageId));
-    setImagesToDelete(prev => [...prev, imageId]);
-  };
-
   const handleSocialLinkChange = (id: number, field: 'platform' | 'url', value: string) => {
     setSocialLinks(currentLinks =>
       currentLinks.map(link => (link.id === id ? { ...link, [field]: value } : link))
@@ -298,49 +235,29 @@ function EditFoodSpotScreen({ route, navigation }: any) {
     setSocialLinks(currentLinks => currentLinks.filter(link => link.id !== id));
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <ActivityIndicator size="large" color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load food spot data.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <CustomStatusBar backgroundColor={'#f4f5f7'} />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={styles.title}>Edit Food Spot</Text>
+        <Text style={styles.title}>Add New Food Spot</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Basic Information</Text>
           <View style={styles.inputContainer}>
             <Feather name="edit" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
+            <TextInput style={styles.input} placeholder="Name *" value={name} onChangeText={setName} placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="tag" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Category" value={category} onChangeText={setCategory} />
+            <TextInput style={styles.input} placeholder="Category *" value={category} onChangeText={setCategory} placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="map-pin" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} />
+            <TextInput style={styles.input} placeholder="City *" value={city} onChangeText={setCity} placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="map" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Address" value={address} onChangeText={setAddress} />
+            <TextInput style={styles.input} placeholder="Address *" value={address} onChangeText={setAddress} placeholderTextColor={colors.darkGray} />
           </View>
         </View>
 
@@ -348,20 +265,21 @@ function EditFoodSpotScreen({ route, navigation }: any) {
           <Text style={styles.cardTitle}>Details</Text>
           <View style={styles.inputContainer}>
             <Feather name="align-left" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={[styles.input, styles.textArea]} placeholder="Description" value={description} onChangeText={setDescription} multiline />
+            <TextInput style={[styles.input, styles.textArea]} placeholder="Description" value={description} onChangeText={setDescription} multiline placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="link" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Info Link" value={infoLink} onChangeText={setInfoLink} />
+            <TextInput style={styles.input} placeholder="Info Link (optional)" value={infoLink} onChangeText={setInfoLink} placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="phone" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} />
+            <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} placeholderTextColor={colors.darkGray} />
           </View>
           <View style={styles.inputContainer}>
             <Feather name="dollar-sign" size={20} color={colors.darkGray} style={styles.icon} />
-            <TextInput style={styles.input} placeholder="Price Range (e.g., €, €€, €€€)" value={priceRange} onChangeText={setPriceRange} />
+            <TextInput style={styles.input} placeholder="Price Range (€, €€, €€€, or €€€€)" value={priceRange} onChangeText={setPriceRange} placeholderTextColor={colors.darkGray} />
           </View>
+          <Text style={styles.helperText}>Enter € for budget, €€ for moderate, €€€ for expensive, or €€€€ for luxury</Text>
         </View>
 
         <View style={styles.card}>
@@ -373,12 +291,14 @@ function EditFoodSpotScreen({ route, navigation }: any) {
                 placeholder="Day Range (e.g., Mon-Fri)"
                 value={hour.dayRange}
                 onChangeText={text => handleBusinessHourChange(hour.id, 'dayRange', text)}
+                placeholderTextColor={colors.darkGray}
               />
               <TextInput
                 style={[styles.hourInput, styles.hourInputTime]}
                 placeholder="Time Range (e.g., 9:00-17:00)"
                 value={hour.timeRange}
                 onChangeText={text => handleBusinessHourChange(hour.id, 'timeRange', text)}
+                placeholderTextColor={colors.darkGray}
               />
               <TouchableOpacity onPress={() => removeBusinessHour(hour.id)} style={styles.removeButton}>
                 <Feather name="x" size={18} color={colors.error} />
@@ -393,6 +313,7 @@ function EditFoodSpotScreen({ route, navigation }: any) {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Social Links</Text>
+          <Text style={styles.helperText}>Add social media links (optional)</Text>
           {socialLinks.map(link => (
             <View key={link.id} style={styles.hourRow}>
               <TextInput
@@ -400,12 +321,14 @@ function EditFoodSpotScreen({ route, navigation }: any) {
                 placeholder="Platform (e.g., facebook)"
                 value={link.platform}
                 onChangeText={text => handleSocialLinkChange(link.id, 'platform', text)}
+                placeholderTextColor={colors.darkGray}
               />
               <TextInput
                 style={[styles.hourInput, styles.hourInputTime]}
                 placeholder="URL"
                 value={link.url}
                 onChangeText={text => handleSocialLinkChange(link.id, 'url', text)}
+                placeholderTextColor={colors.darkGray}
               />
               <TouchableOpacity onPress={() => removeSocialLink(link.id)} style={styles.removeButton}>
                 <Feather name="x" size={18} color={colors.error} />
@@ -421,14 +344,6 @@ function EditFoodSpotScreen({ route, navigation }: any) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Photos</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScrollView}>
-            {existingImages.map(image => (
-              <View key={image.id} style={styles.imageContainer}>
-                <Image source={{ uri: getFullImageUrl(image) }} style={styles.image} />
-                <TouchableOpacity onPress={() => handleRemoveExistingImage(image.id)} style={styles.removeImageButton}>
-                  <Feather name="x" size={18} color={colors.white} />
-                </TouchableOpacity>
-              </View>
-            ))}
             {newImages.map(image => (
               <View key={image.uri} style={styles.imageContainer}>
                 <Image source={{ uri: image.uri }} style={styles.image} />
@@ -444,19 +359,11 @@ function EditFoodSpotScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleUpdate} disabled={isUpdating || isDeleting}>
-          {isUpdating ? (
+        <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={isCreating}>
+          {isCreating ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.buttonText}>Update Food Spot</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={isUpdating || isDeleting}>
-          {isDeleting ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.deleteButtonText}>Delete Food Spot</Text>
+            <Text style={styles.buttonText}>Create Food Spot</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -591,28 +498,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  deleteButton: {
-    backgroundColor: colors.error,
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginHorizontal: 15,
-    marginTop: 10,
-  },
-  deleteButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 16,
+  helperText: {
+    fontSize: 12,
+    color: colors.darkGray,
+    marginLeft: 35,
+    marginTop: -10,
+    marginBottom: 15,
+    fontStyle: 'italic',
   },
 });
 
-export default EditFoodSpotScreen;
+export default AddFoodSpotScreen;

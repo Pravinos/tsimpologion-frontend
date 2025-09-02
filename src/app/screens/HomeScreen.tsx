@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Constants from 'expo-constants';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
@@ -259,6 +260,15 @@ const HomeScreen = ({ navigation }: any) => {
             sortOptions={SORT_OPTIONS}
           />
         </View>
+        {/* FAB for admin to add new food spots */}
+        {user?.role === 'admin' && (
+          <TouchableOpacity 
+            style={styles.fab}
+            onPress={() => navigation.navigate('AddFoodSpot')}
+          >
+            <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -374,6 +384,22 @@ const styles = StyleSheet.create({
   statusBar: {
     height: Constants.statusBarHeight,
     marginTop: -10
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });
 

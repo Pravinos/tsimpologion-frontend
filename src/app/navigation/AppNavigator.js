@@ -12,6 +12,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import FoodSpotDetailScreen from '../screens/FoodSpotDetailScreen';
 import EditFoodSpotScreen from '../screens/EditFoodSpotScreen';
+import AddFoodSpotScreen from '../screens/AddFoodSpotScreen';
 import CategorizedFoodSpotsScreen from '../screens/CategorizedFoodSpotsScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 
@@ -110,6 +111,21 @@ function MainStack() {
       <Stack.Screen 
         name="EditFoodSpot" 
         component={EditFoodSpotScreen} 
+        options={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          contentStyle: {
+            backgroundColor: colors.white,
+          }
+        }} 
+      />
+
+      {/* AddFoodSpot screen */}
+      <Stack.Screen 
+        name="AddFoodSpot" 
+        component={AddFoodSpotScreen} 
         options={{ 
           headerShown: false,
           animation: 'slide_from_right',

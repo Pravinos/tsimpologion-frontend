@@ -100,7 +100,7 @@ You can try out Tsimpologion right now on your mobile device!
 2. **Scan the QR Code Below:**  
    Open Expo Go and use its built-in QR code scanner to scan this code:
 
-   ![Scan this QR code with Expo Go](src/assets/expo_qr.png)
+   ![Scan this QR code with Expo Go](src/assets/images/expo_qr.png)
 
 3. **Open the App:**  
    The app will load instantly, using the latest published update!

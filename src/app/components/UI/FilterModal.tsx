@@ -100,27 +100,29 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 <MaterialCommunityIcons name="close" size={24} color={colors.darkGray} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Filter & Sort</Text>
-              <View style={styles.filterSection}>
-                <Text style={styles.modalLabel}>Category</Text>
-                <View style={styles.buttonListRow}>
-                  <TouchableOpacity
-                    style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
-                    onPress={() => setSelectedCategory('')}
-                  >
-                    <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
-                  </TouchableOpacity>{categories.filter(cat => cat && cat.trim()).map((cat) => (
+              {categories.length > 0 && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.modalLabel}>Category</Text>
+                  <View style={styles.buttonListRow}>
                     <TouchableOpacity
-                      key={cat}
-                      style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
-                      onPress={() => setSelectedCategory(cat)}
+                      style={[styles.optionButton, selectedCategory === '' && styles.optionButtonSelected]}
+                      onPress={() => setSelectedCategory('')}
                     >
-                      <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      <Text style={[styles.optionButtonText, selectedCategory === '' && styles.optionButtonTextSelected]}>All</Text>
+                    </TouchableOpacity>{categories.filter(cat => cat && cat.trim()).map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[styles.optionButton, selectedCategory === cat && styles.optionButtonSelected]}
+                        onPress={() => setSelectedCategory(cat)}
+                      >
+                        <Text style={[styles.optionButtonText, selectedCategory === cat && styles.optionButtonTextSelected]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
+              )}
               <View style={styles.filterSection}>
                 <View style={styles.labelInfoRow}>
                   <Text style={styles.modalLabel}>Price Range</Text>
@@ -254,33 +256,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    backgroundColor: colors.lightGray, // match priceContainer
-    paddingHorizontal: 12, // match priceContainer (6*2 for more touch area)
-    paddingVertical: 4, // match priceContainer (2*2 for more touch area)
-    borderRadius: 12, // more pill-like, similar to priceContainer
+    backgroundColor: colors.lightGray,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
     minWidth: 40,
     alignItems: 'center',
     marginRight: 8,
     marginBottom: 8,
-    borderWidth: 0, // remove border for pill look
-    // Remove shadow for a flat look, or keep if you want elevation
   },
   optionButtonSelected: {
-    backgroundColor: colors.primary, // match selected priceRange color
+    backgroundColor: colors.primary,
   },
   optionButtonText: {
-    color: colors.primary, // match priceRange text color
-    fontWeight: '600', // match priceRange fontWeight
+    color: colors.primary,
+    fontWeight: '600', 
     fontSize: 14,
   },
   optionButtonTextSelected: {
-    color: colors.white, // white text on primary background
+    color: colors.white, 
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
-    gap: 12,
+    marginTop: 6,
+    gap: 10,
+    marginHorizontal: -6,
   },
   modalButton: {
     flex: 1,

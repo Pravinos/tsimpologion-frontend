@@ -94,8 +94,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchText, setSearchText, onFilt
 const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    marginTop: 4,
+    marginBottom: 14,
   },
   searchBar: {
     flex: 1,

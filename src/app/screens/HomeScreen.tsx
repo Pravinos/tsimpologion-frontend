@@ -8,13 +8,15 @@ import {
   ActivityIndicator,
   Image,
   Keyboard,
-  TouchableWithoutFeedback,
-  StatusBar
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Constants from 'expo-constants';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
@@ -22,26 +24,25 @@ import { useFoodSpots } from '@/app/hooks/useFoodSpots';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
-import { FilterModal, SearchBar, ListTypeSelector, CustomStatusBar } from '@/app/components/UI';
+import { FilterModal, SearchBar, ListTypeSelector } from '@/app/components/UI';
 
 // Utilities and styles
 import colors from '../styles/colors';
 import { getFullImageUrl } from '../utils/getFullImageUrl';
 
 // Types
-import { FoodSpot, ScreenProps } from '../types/appTypes';
+import { FoodSpot } from '../types/appTypes';
 
 const SORT_OPTIONS = [
   { label: 'Highest First', value: 'desc' },
   { label: 'Lowest First', value: 'asc' },
 ];
 
-type ListType = 'popular' | 'favourites' | 'mySpots';
+type ListType = 'trending' | 'all' | 'favourites' | 'mySpots';
 
 // --- Helper Components ---
 const LoadingState = () => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-    <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Loading food spots...</Text>
@@ -52,7 +53,7 @@ const LoadingState = () => (
 const ErrorState = ({ listType, refetch }: { listType: ListType; refetch: () => void }) => (
   <View style={styles.errorContainer}>
     <Text style={styles.errorText}>
-      Failed to load {listType === 'favourites' ? 'favourites' : 'food spots'}. Please try again.
+      Failed to load {listType === 'favourites' ? 'favourites' : listType === 'trending' ? 'trending spots' : 'food spots'}. Please try again.
     </Text>
     <TouchableOpacity style={styles.retryButton} onPress={refetch}>
       <Text style={styles.retryText}>Try Again</Text>
@@ -71,27 +72,32 @@ const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; i
           ? "You haven't saved any favorites yet" 
           : listType === 'mySpots' 
             ? "You haven't added any food spots yet"
-            : "No food spots found"}
+            : listType === 'trending'
+              ? "No trending spots found"
+              : "No food spots found"}
       </Text>
       <Text style={styles.emptySubText}>
         {listType === 'favourites' 
-          ? "Browse popular spots and tap the heart icon to add them to your favorites"
+          ? "Browse trending spots and tap the heart icon to add them to your favorites"
           : listType === 'mySpots'
             ? "Add your first food spot to get started!"
-            : "Try adjusting your filters or search keywords."}
+            : listType === 'trending'
+              ? "Trending spots are based on recent reviews and ratings. Check back later or explore all spots."
+              : "Try adjusting your filters or search keywords."}
       </Text>
     </View>
   );
 };
 
 // --- Main Component ---
-const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
+const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
 
-  // Memoized list options
+  // Memoized list options - Updated to include Trending and All Spots
   const LIST_OPTIONS = useMemo(() => {
     const options = [
-      { label: 'Popular', value: 'popular' as ListType },
+      { label: 'Trending', value: 'trending' as ListType }, // Shows spots with high engagement and quality scores
+      { label: 'All Spots', value: 'all' as ListType }, // Shows all available food spots
       { label: 'Favourites', value: 'favourites' as ListType },
     ];
     if (user?.role === 'spot_owner') {
@@ -100,8 +106,8 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     return options;
   }, [user]);
 
-  // UI state
-  const [listType, setListType] = useState<ListType>('popular');
+  // UI state - Default to trending to showcase the best spots first
+  const [listType, setListType] = useState<ListType>('trending');
   const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -167,10 +173,18 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
     setListType(value as ListType);
   }, []);
 
-  // --- Focus Effect for StatusBar ---
+  // Force status bar to dark when HomeScreen is focused
   useFocusEffect(
     React.useCallback(() => {
-      StatusBar.setBarStyle('dark-content');
+      // Immediate update
+      setStatusBarStyle('dark');
+      
+      // One delayed update to ensure it sticks
+      const timer = setTimeout(() => setStatusBarStyle('dark'), 100);
+      
+      return () => {
+        clearTimeout(timer);
+      };
     }, [])
   );
 
@@ -182,12 +196,12 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
+        <View style={[styles.statusBar, { backgroundColor: colors.white }]} />
         <View style={styles.container}>
           <Animated.View entering={FadeInDown.duration(1000)} style={styles.header}>
             <View>
               <Text style={styles.welcome}>
-                {user && user.username ? `Hi ${user.username} 👋` : 'Hi 👋'}
+                {user?.username ? `Hi ${user.username} 👋` : 'Hi 👋'}
               </Text>
               <Text style={styles.title}>Find the perfect spot</Text>
               <Text style={styles.subtitle}>Explore authentic flavors near you</Text>
@@ -196,7 +210,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               style={styles.profileButton}
               onPress={() => navigation.navigate('Profile')}
             >
-              {user && user.images && user.images.length > 0 && getFullImageUrl(user.images[0]) ? (
+              {(user && Array.isArray(user.images) && user.images.length > 0 && getFullImageUrl(user.images[0])) ? (
                 <Image source={{ uri: getFullImageUrl(user.images[0]) }} style={styles.profileImage} />
               ) : (
                 <Feather name="user" size={24} color={colors.white} />
@@ -208,7 +222,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             setSearchText={setSearchText}
             onFilterPress={() => setFilterModalVisible(true)}
             suggestions={spotSuggestions}
-            onSelectSuggestion={(name) => setSearchText(name)}
+            onSelectSuggestion={setSearchText}
           />
           <View style={styles.listTypeSelectorContainer}>
             <ListTypeSelector
@@ -228,9 +242,7 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
               contentContainerStyle={styles.listContent}
               refreshing={isFetching}
               onRefresh={handleRefresh}
-              ListEmptyComponent={
-                isError ? null : <EmptyState listType={listType} isLoading={isLoading} isFetching={isFetching} />
-              }
+              ListEmptyComponent={<EmptyState listType={listType} isLoading={isLoading} isFetching={isFetching} />}
             />
           )}
           <FilterModal
@@ -248,6 +260,15 @@ const HomeScreen: React.FC<ScreenProps> = ({ navigation }) => {
             sortOptions={SORT_OPTIONS}
           />
         </View>
+        {/* FAB for admin to add new food spots */}
+        {user?.role === 'admin' && (
+          <TouchableOpacity 
+            style={styles.fab}
+            onPress={() => navigation.navigate('AddFoodSpot')}
+          >
+            <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -299,8 +320,8 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
   },
   listTypeSelectorContainer: {
-    marginTop: 6,
-    marginBottom: 6,
+    marginVertical: 10,
+    width: '100%',
   },
   listContent: {
     paddingBottom: 20,
@@ -360,17 +381,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
-  section: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    marginHorizontal: 13,
-    marginBottom: 18,
-    padding: 20,
-    shadowColor: colors.primary,
+  statusBar: {
+    height: Constants.statusBarHeight,
+    marginTop: -10
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });
 

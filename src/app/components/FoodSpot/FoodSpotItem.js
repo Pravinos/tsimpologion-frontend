@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../styles/colors';
 import StarRating from '../UI/StarRating';
+
 import { getIconForCategory } from '../../utils/categoryIcons';
 
-const FoodSpotItem = ({ item, onPress }) => {
+const FoodSpotItem = ({ item, onPress, showTrendingBadge = false }) => {
   const scale = useRef(new RNAnimated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -68,28 +69,30 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: colors.white,
     borderRadius: 16,
-    marginBottom: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 1,
   },
   iconContainer: {
     marginRight: 16,
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.lightGray,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   contentContainer: {
     flex: 1,

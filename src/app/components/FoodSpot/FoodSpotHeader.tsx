@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import StarRating from '../UI/StarRating';
 import colors from '../../styles/colors';
 import { getIconForCategory } from '../../utils/categoryIcons';
@@ -17,6 +18,7 @@ interface FoodSpotHeaderProps {
 }
 
 const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category, price_range, isFavourite, onToggleFavourite, showFavourite }) => {
+  const navigation = useNavigation();
   const iconName = getIconForCategory(category);
   const [isProcessingFavourite, setIsProcessingFavourite] = useState(false);
   const isFavouriteCoolingDownRef = useRef(false);
@@ -34,6 +36,12 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
     }, 2000);
   };
 
+  const handleCategoryPress = () => {
+    if (category) {
+      (navigation as any).navigate('CategorizedFoodSpots', { category });
+    }
+  };
+
   return (
     <View style={styles.headerContainer}>
       <Animated.View
@@ -41,9 +49,13 @@ const FoodSpotHeader: React.FC<FoodSpotHeaderProps> = ({ name, rating, category,
         style={styles.headerCard}
       >
         <View style={styles.topRow}>
-          <View style={styles.iconBackgroundSmall}>
+          <TouchableOpacity 
+            style={styles.iconBackgroundSmall} 
+            onPress={handleCategoryPress}
+            disabled={!category}
+          >
             <MaterialCommunityIcons name={iconName} size={28} color={colors.primary} />
-          </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{name}</Text>
           {showFavourite && (
             <TouchableOpacity

@@ -5,7 +5,6 @@ import AppNavigator from './app/navigation/AppNavigator';
 import { AuthProvider } from './app/services/AuthProvider';
 import { QueryClientProvider } from '@tanstack/react-query';
 import queryClient from './app/queryClient';
-import { StatusBar } from 'expo-status-bar';
 
 const MyTheme = {
   ...DefaultTheme,
@@ -21,7 +20,6 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SafeAreaProvider>
-          <StatusBar style="dark" />
           <NavigationContainer theme={MyTheme}>
             <AppNavigator />
           </NavigationContainer>

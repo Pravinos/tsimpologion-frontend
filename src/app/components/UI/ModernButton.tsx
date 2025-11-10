@@ -69,6 +69,8 @@ const styles = StyleSheet.create({
     elevation: 0.5,
     flexDirection: 'row',
     transitionDuration: '150ms',
+    marginHorizontal: 8,
+    marginBottom: 8,
   },
   primary: {
     backgroundColor: colors.primary,

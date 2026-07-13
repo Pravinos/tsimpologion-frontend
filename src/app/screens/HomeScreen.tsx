@@ -21,6 +21,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Hooks and services
 import { useAuth } from '@/services/AuthProvider';
 import { useFoodSpots } from '@/app/hooks/useFoodSpots';
+import { useFoodSpotListFilters } from '@/app/hooks/useFoodSpotListFilters';
+import { NavigationProps } from '@/app/types/appTypes';
 
 // Components
 import { FoodSpotItem } from '../components/FoodSpot';
@@ -90,7 +92,7 @@ const EmptyState = ({ listType, isLoading, isFetching }: { listType: ListType; i
 };
 
 // --- Main Component ---
-const HomeScreen = ({ navigation }: any) => {
+const HomeScreen = ({ navigation }: { navigation: NavigationProps }) => {
   const { user } = useAuth();
 
   // Memoized list options - Updated to include Trending and All Spots
@@ -108,58 +110,27 @@ const HomeScreen = ({ navigation }: any) => {
 
   // UI state - Default to trending to showcase the best spots first
   const [listType, setListType] = useState<ListType>('trending');
-  const [searchText, setSearchText] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedPriceRange, setSelectedPriceRange] = useState('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>('');
 
   // Query for food spots using the custom hook
   const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots(listType);
 
-  // Memoized categories
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    currentData.forEach((spot: FoodSpot) => {
-      if (spot.category) set.add(spot.category);
-    });
-    return Array.from(set).sort();
-  }, [currentData]);
-
-  // Memoized filtered and sorted food spots
-  const filteredFoodSpots = useMemo(() => {
-    let filtered = currentData.filter((spot: FoodSpot) => {
-      const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
-      const matchesCategory = !selectedCategory || 
-        (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-      const matchesPriceRange = !selectedPriceRange || spot.price_range === selectedPriceRange;
-      return matchesSearch && matchesCategory && matchesPriceRange;
-    });
-    filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
-      if (priceSortDirection && a.price_range && b.price_range) {
-        const priceOrder = ['€', '€€', '€€€'];
-        const aPrice = priceOrder.indexOf(a.price_range);
-        const bPrice = priceOrder.indexOf(b.price_range);
-        return priceSortDirection === 'asc' ? aPrice - bPrice : bPrice - aPrice;
-      }
-      return sortDirection === 'asc'
-        ? (a.rating || 0) - (b.rating || 0)
-        : (b.rating || 0) - (a.rating || 0);
-    });
-    return filtered;
-  }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]);
-
-  // Memoized food spot name suggestions for the search bar
-  const spotSuggestions = useMemo(() => {
-    if (!searchText || !currentData) return [];
-    return currentData
-      .filter((spot: FoodSpot) =>
-        spot.name.toLowerCase().startsWith(searchText.toLowerCase())
-      )
-      .map((spot: FoodSpot) => spot.name)
-      .slice(0, 5); // Limit to 5 suggestions
-  }, [searchText, currentData]);
+  // Shared search/filter/sort logic (also used by CategorizedFoodSpotsScreen)
+  const {
+    searchText,
+    setSearchText,
+    selectedCategory,
+    setSelectedCategory,
+    selectedPriceRange,
+    setSelectedPriceRange,
+    sortDirection,
+    setSortDirection,
+    priceSortDirection,
+    setPriceSortDirection,
+    categories,
+    filteredFoodSpots,
+    spotSuggestions,
+  } = useFoodSpotListFilters(currentData);
 
   // --- Memoized Callbacks ---
   const handleRefresh = useCallback(() => refetch(), [refetch]);
@@ -189,7 +160,10 @@ const HomeScreen = ({ navigation }: any) => {
   );
 
   // --- Render ---
-  if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
+  // NOTE: isLoading and isFetching are both true during the initial fetch in
+  // React Query v5, so `isLoading && !isFetching` was never true on first
+  // load and this loading screen effectively never rendered.
+  if ((isLoading || isFetching) && filteredFoodSpots.length === 0) {
     return <LoadingState />;
   }
 

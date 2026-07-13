@@ -7,11 +7,26 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  name: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
   email: string;
   password: string;
   password_confirmation: string;
   role?: 'foodie' | 'spot_owner';
+}
+
+// Returned by AuthProvider's login/register instead of throwing, so screens
+// can branch on the outcome without try/catch. Fields are optional (rather
+// than a strict discriminated union) since callers check them individually
+// with `result?.authError` / `result?.unexpectedError` / `result?.message`.
+export interface AuthResult {
+  authError?: boolean;
+  unexpectedError?: boolean;
+  message?: string;
+  token?: string;
+  [key: string]: any;
 }
 
 export interface FoodSpot {
@@ -76,7 +91,8 @@ export interface User {
 
 export type RootStackParamList = {
   Home: undefined;
-  FoodSpotDetail: { foodSpot: FoodSpot };
+  FoodSpotDetail: { foodSpot: FoodSpot; scrollToReviews?: boolean };
+  CategorizedFoodSpots: { category: string };
   Profile: undefined;
   EditProfile: undefined;
   EditFoodSpot: { foodSpotId: number };

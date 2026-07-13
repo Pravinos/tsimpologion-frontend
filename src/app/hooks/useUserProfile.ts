@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getCurrentUser, getUserReviews } from '@/services/ApiClient';
+import { getCurrentUser, getUserReviews, unwrap } from '@/services/ApiClient';
 import { useAuth } from '@/services/AuthProvider';
 import { User, Review } from '@/app/types/appTypes';
 
@@ -17,7 +17,7 @@ export const useUserProfile = () => {
     queryFn: async () => {
       try {
         const response = await getCurrentUser();
-        return response.data?.data || response.data;
+        return unwrap(response);
       } catch (err) {
         const error = err as any;
         if (error.response?.status !== 401) {
@@ -27,7 +27,6 @@ export const useUserProfile = () => {
       }
     },
     enabled: !!token,
-    staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });
 
@@ -41,16 +40,11 @@ export const useUserProfile = () => {
     queryFn: async () => {
       if (!userProfile?.id) return [];
       const response = await getUserReviews(userProfile.id);
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        return response.data.data;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      } else {
-        return [];
-      }
+      const data = unwrap(response);
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!userProfile?.id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2, // shorter than the global default: reviews change more often
   });
 
   return {

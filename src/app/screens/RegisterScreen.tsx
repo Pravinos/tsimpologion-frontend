@@ -144,10 +144,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         password_confirmation: formState.values.passwordConfirmation,
       });
       if (result?.authError) {
-        setApiError(result.message);
+        setApiError(result.message ?? 'Registration failed.');
       } else if (result?.unexpectedError) {
         setApiError(null);
-        Alert.alert('Registration Error', result.message, [{ text: 'OK', style: 'default' }]);
+        Alert.alert('Registration Error', result.message ?? 'Unexpected error.', [{ text: 'OK', style: 'default' }]);
       } else if (result?.message) {
         // Registration success (no auto-login)
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

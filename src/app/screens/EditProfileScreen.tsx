@@ -17,15 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import colors from '../styles/colors';
 import { useAuth } from '@/services/AuthProvider';
-import { updateUser, getCurrentUser, getToken, deleteImage } from '@/services/ApiClient';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { updateUser, getCurrentUser, deleteImage, unwrap } from '@/services/ApiClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import ModernButton from '../components/UI/ModernButton';
 import { CustomStatusBar } from '../components/UI';
-// import AvatarSection from '../components/Profile/AvatarSection'; // Removed unused import
-// import PersonalInfoSection from '../components/Profile/PersonalInfoSection'; // Removed unused import
 import PasswordSection from '../components/Profile/PasswordSection';
-import { uploadImage as uploadImageUtil } from '../utils/uploadUtils';
+import { uploadImage as uploadImageUtil, extractUploadedImageUrl } from '../utils/uploadUtils';
+import { NavigationProps } from '@/app/types/appTypes';
 
 interface FormErrors {
   username?: string;
@@ -52,9 +51,8 @@ const LoadingState = () => (
 );
 
 // --- Main Component ---
-const EditProfileScreen = ({ navigation }: { navigation: any }) => {
+const EditProfileScreen = ({ navigation }: { navigation: NavigationProps }) => {
   const { user: authUser, token, updateUserInContext } = useAuth();
-  const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
 
   // Form fields
@@ -80,12 +78,8 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     refetch: refetchProfile,
   } = useQuery({
     queryKey: ['userProfile', token],
-    queryFn: async () => {
-      const response = await getCurrentUser();
-      return response.data?.data || response.data;
-    },
+    queryFn: async () => unwrap(await getCurrentUser()),
     enabled: !!token,
-    staleTime: 1000 * 60 * 5,
   });
 
   // Pre-fill form fields with user data when loaded
@@ -161,10 +155,13 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
     return Object.keys(newErrors).length === 0;
   }, [username, firstName, lastName, email, currentPassword, newPassword, confirmPassword]);
 
-  const handleSave = React.useCallback(async () => {
-    if (!validateForm() || !userProfile) return;
-    try {
-      setSaving(true);
+  // Standardized on useMutation (matching FoodSpotDetailScreen/Add/EditFoodSpot)
+  // instead of a manual try/catch/finally + setSaving, for consistent
+  // loading/error semantics across all write actions in the app.
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!userProfile) throw new Error('Profile not loaded');
+
       let imageUrlToSend = selectedImage;
       if (selectedImage && pickerAsset && selectedImage.startsWith('file')) {
         // Delete old image if exists
@@ -175,52 +172,41 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
             console.warn('Failed to delete old profile image:', e);
           }
         }
-        // Use uploadUtils.js util for upload
         const uploadRes = await uploadImageUtil(pickerAsset, 'users', userProfile.id);
-        let uploadedImageUrl;
-        if (uploadRes.data?.data && Array.isArray(uploadRes.data.data)) {
-          uploadedImageUrl = uploadRes.data.data[0];
-        } else if (uploadRes.data?.data) {
-          uploadedImageUrl = uploadRes.data.data;
-        } else if (uploadRes.data?.images && Array.isArray(uploadRes.data.images)) {
-          uploadedImageUrl = uploadRes.data.images[0];
-        }
-        setSelectedImage(
-          uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl)
-        );
-        imageUrlToSend =
-          uploadedImageUrl && (typeof uploadedImageUrl === 'string' ? uploadedImageUrl : uploadedImageUrl.url || uploadedImageUrl);
+        imageUrlToSend = extractUploadedImageUrl(uploadRes);
       }
+
       const updateData: any = {
         username: username.trim(),
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: phone.trim() || undefined,
         email: email.trim(),
+        images: imageUrlToSend ? [imageUrlToSend] : [],
       };
       if (currentPassword && newPassword) {
         updateData.current_password = currentPassword;
         updateData.password = newPassword;
         updateData.password_confirmation = confirmPassword;
       }
-      if (imageUrlToSend) {
-        updateData.images = [imageUrlToSend];
-      } else {
-        updateData.images = [];
-      }
+
       const response = await updateUser(userProfile.id, updateData);
-      const updatedUser = response.data?.data || response.data;
+      return { updatedUser: unwrap(response), imageUrlToSend };
+    },
+    onSuccess: async ({ updatedUser, imageUrlToSend }) => {
+      setSelectedImage(imageUrlToSend);
       if (updateUserInContext) {
         await updateUserInContext(updatedUser);
       }
       await queryClient.invalidateQueries({ queryKey: ['userProfile', token] });
-      await queryClient.invalidateQueries({ queryKey: ['userReviews', userProfile.id] });
+      await queryClient.invalidateQueries({ queryKey: ['userReviews', userProfile?.id] });
       Alert.alert(
         'Success',
         'Your profile has been updated successfully!',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       if (err.response) {
         console.error('Backend error:', err.response.status, err.response.data);
         if (err.response.data?.errors) {
@@ -234,10 +220,15 @@ const EditProfileScreen = ({ navigation }: { navigation: any }) => {
         console.error('Failed to update profile:', err);
         Alert.alert('Error', 'Failed to update profile. Please try again.');
       }
-    } finally {
-      setSaving(false);
-    }
-  }, [validateForm, userProfile, selectedImage, pickerAsset, username, firstName, lastName, phone, email, currentPassword, newPassword, confirmPassword, updateUserInContext, queryClient, token, navigation]);
+    },
+  });
+
+  const saving = saveMutation.isPending;
+
+  const handleSave = React.useCallback(() => {
+    if (!validateForm() || !userProfile) return;
+    saveMutation.mutate();
+  }, [validateForm, userProfile, saveMutation]);
 
   if (loading) return <LoadingState />;
 

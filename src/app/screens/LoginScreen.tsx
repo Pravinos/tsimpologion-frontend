@@ -110,10 +110,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     try {
       const result = await login(formState.values);
       if (result?.authError) {
-        setApiError(result.message);
+        setApiError(result.message ?? 'Invalid email or password.');
       } else if (result?.unexpectedError) {
         setApiError(null);
-        Alert.alert('Login Error', result.message, [{ text: 'OK', style: 'default' }]);
+        Alert.alert('Login Error', result.message ?? 'Unexpected error.', [{ text: 'OK', style: 'default' }]);
       }
       // If login is successful, navigation is handled by AuthProvider/AppNavigator
     } finally {

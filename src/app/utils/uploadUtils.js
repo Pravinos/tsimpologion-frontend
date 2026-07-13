@@ -123,7 +123,33 @@ export async function uploadMultipleImages(images, modelType, modelId) {
   return apiUploadImage(modelType, modelId, formData);
 }
 
+/**
+ * Extracts the first uploaded image URL from an upload response, regardless
+ * of which shape the backend happened to reply with. Centralizes what used
+ * to be three separately-guessed shapes (`data.data[0]`, `data.data`,
+ * `data.images[0]`) duplicated inline in EditProfileScreen.
+ * @param {Object} uploadResponse - The axios response from uploadImage/uploadMultipleImages
+ * @returns {string|null} - The URL string, or null if none could be found
+ */
+export function extractUploadedImageUrl(uploadResponse) {
+  const data = uploadResponse?.data;
+  if (!data) return null;
+
+  let candidate;
+  if (Array.isArray(data.data)) {
+    candidate = data.data[0];
+  } else if (data.data) {
+    candidate = data.data;
+  } else if (Array.isArray(data.images)) {
+    candidate = data.images[0];
+  }
+
+  if (!candidate) return null;
+  return typeof candidate === 'string' ? candidate : candidate.url || null;
+}
+
 export default {
   uploadImage,
-  uploadMultipleImages
+  uploadMultipleImages,
+  extractUploadedImageUrl,
 };

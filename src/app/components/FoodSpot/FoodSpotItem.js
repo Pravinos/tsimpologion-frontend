@@ -6,7 +6,7 @@ import StarRating from '../UI/StarRating';
 
 import { getIconForCategory } from '../../utils/categoryIcons';
 
-const FoodSpotItem = ({ item, onPress, showTrendingBadge = false }) => {
+const FoodSpotItem = ({ item, onPress }) => {
   const scale = useRef(new RNAnimated.Value(1)).current;
 
   const handlePressIn = () => {

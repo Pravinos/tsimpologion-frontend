@@ -67,13 +67,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       Alert.alert('Comment Required', 'Please write a comment for your review.');
       return;
     }
-    
-    await onSubmit(rating, comment, selectedImages);
-    
-    // Reset form after successful submission
-    setRating(0);
-    setComment('');
-    setSelectedImages([]);
+
+    try {
+      // onSubmit now uses mutateAsync under the hood, so this only resolves
+      // once the mutation has actually settled (and rejects on failure) —
+      // previously it resolved as soon as the fire-and-forget mutate() call
+      // returned, letting the form reset before/regardless of the outcome.
+      await onSubmit(rating, comment, selectedImages);
+      setRating(0);
+      setComment('');
+      setSelectedImages([]);
+    } catch (error) {
+      // The mutation's own onError already surfaces an alert; keep the
+      // user's input intact so they can retry instead of losing it.
+    }
   };
   
   if (!isLoggedIn) {

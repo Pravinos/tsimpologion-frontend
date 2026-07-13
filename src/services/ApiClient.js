@@ -1,6 +1,6 @@
 // First ensure these imports are at the top
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // --- Configuration ---
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -28,12 +28,41 @@ apiClient.interceptors.request.use(
   }
 );
 
+// --- Session-expiry notification (401 handling) ---
+// ApiClient has no knowledge of AuthProvider's React state, so it exposes a
+// tiny subscriber list that AuthProvider registers with. When any request
+// comes back 401, we clear the stored token and notify subscribers so the
+// app can immediately drop back to the auth stack instead of only detecting
+// the stale session on the next cold start.
+const sessionExpiredListeners = new Set();
+
+export const onSessionExpired = (listener) => {
+  sessionExpiredListeners.add(listener);
+  return () => {
+    sessionExpiredListeners.delete(listener);
+  };
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      await removeToken();
+      sessionExpiredListeners.forEach((listener) => listener());
+    }
+    return Promise.reject(error);
+  }
+);
+
 // --- Token Management ---
+// This module is the single owner of token persistence. AuthProvider should
+// never read/write the token directly; it only reacts to the current value
+// via these exports (and the onSessionExpired subscription above).
 const TOKEN_KEY = 'authToken';
 
 export const storeToken = async (token) => {
   try {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
   } catch (e) {
     console.error('Failed to save the token to storage', e);
   }
@@ -41,7 +70,7 @@ export const storeToken = async (token) => {
 
 export const getToken = async () => {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    return await SecureStore.getItemAsync(TOKEN_KEY);
   } catch (e) {
     console.error('Failed to fetch the token from storage', e);
     return null;
@@ -50,11 +79,17 @@ export const getToken = async () => {
 
 export const removeToken = async () => {
   try {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (e) {
     console.error('Failed to remove the token from storage', e);
   }
 };
+
+// --- Response unwrapping ---
+// The Laravel API sometimes wraps payloads as { data: ... } and sometimes
+// returns the resource directly. Centralize the "unwrap" logic here instead
+// of repeating `response.data?.data || response.data` at every call site.
+export const unwrap = (response) => response?.data?.data ?? response?.data;
 
 // --- Generic HTTP Methods ---
 const get = (url, params = {}, config = {}) => 

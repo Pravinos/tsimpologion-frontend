@@ -1,7 +1,8 @@
-// Export all Profile components
-export { default as ProfileInfo } from './ProfileInfo';
-export { default as ProfileHeader } from './ProfileHeader';
-export { default as ProfileActions } from './ProfileActions';
+// Export remaining Profile components (ProfileInfo/ProfileHeader/ProfileActions/
+// AvatarSection/PersonalInfoSection were removed as confirmed dead code — see
+// the Auth to Actions bug-fix plan, section 8)
+export { default as FormInput } from './FormInput';
+export { default as PasswordSection } from './PasswordSection';
 
 // Create a React component as the default export
 import React from 'react';

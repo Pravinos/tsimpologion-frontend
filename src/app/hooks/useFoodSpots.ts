@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getFoodSpots, getFavourites, getUserFoodSpots } from '@/services/ApiClient';
+import { getFoodSpots, getFavourites, getUserFoodSpots, unwrap } from '@/services/ApiClient';
 import { FoodSpot } from '@/app/types/appTypes';
 import { useAuth } from '@/services/AuthProvider';
 import { sortForTrending } from '@/app/utils/trendingUtils';
@@ -19,9 +19,8 @@ export const useFoodSpots = (listType: ListType) => {
     queryKey: ['foodSpots'],
     queryFn: async () => {
       const response = await getFoodSpots();
-      return response.data?.data || response.data || [];
+      return unwrap(response) || [];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'all' || listType === 'trending',
   });
 
@@ -35,9 +34,8 @@ export const useFoodSpots = (listType: ListType) => {
     queryKey: ['favourites'],
     queryFn: async () => {
       const response = await getFavourites();
-      return response.data?.data || response.data || [];
+      return unwrap(response) || [];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'favourites',
   });
 
@@ -52,9 +50,8 @@ export const useFoodSpots = (listType: ListType) => {
     queryFn: async () => {
       if (!user?.id) return [];
       const response = await getUserFoodSpots(user.id);
-      return response.data?.data || response.data || [];
+      return unwrap(response) || [];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: listType === 'mySpots' && !!user?.id,
   });
 

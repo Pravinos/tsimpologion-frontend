@@ -16,7 +16,7 @@ import { getFullImageUrl } from '../utils/getFullImageUrl';
 import { CustomStatusBar } from '../components/UI';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { NavigationProps } from '@/app/types/appTypes';
 
 // --- Helper Components ---
 const LoadingState = () => (
@@ -29,16 +29,19 @@ const LoadingState = () => (
   </SafeAreaView>
 );
 
-const NotLoggedInState = ({ navigation }: { navigation: any }) => (
+const NotLoggedInState = ({ onLogout }: { onLogout: () => void }) => (
   <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
     <CustomStatusBar backgroundColor={colors.white} barStyle="dark-content" />
     <View style={styles.notLoggedInContainer}>
       <Text style={styles.notLoggedInText}>
         Please log in to view your profile.
       </Text>
+      {/* 'Auth' is a root-level screen name that isn't reachable by
+          navigating from inside MainStack/HomeTabs. Logging out flips
+          AppNavigator's root screen to AuthStack automatically. */}
       <TouchableOpacity 
         style={styles.loginButton}
-        onPress={() => navigation.navigate('Auth')}
+        onPress={onLogout}
       >
         <Text style={styles.loginButtonText}>Log In</Text>
       </TouchableOpacity>
@@ -62,9 +65,8 @@ const ErrorState = ({ refetchProfile, handleLogout }: { refetchProfile: () => vo
 );
 
 // --- Main Component ---
-function ProfileScreen({ navigation }: { navigation: any }) {
+function ProfileScreen({ navigation }: { navigation: NavigationProps }) {
   const { user: authUser, token, logout } = useAuth();
-  const queryClient = useQueryClient();
   const { 
     userProfile,
     isProfileLoading,
@@ -77,13 +79,12 @@ function ProfileScreen({ navigation }: { navigation: any }) {
   const handleLogout = React.useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: async () => {
-        await logout();
-        queryClient.invalidateQueries({ queryKey: ['userProfile', token] });
-        queryClient.invalidateQueries({ queryKey: ['userReviews'] });
-      }}
+      // AuthProvider.logout() clears the entire query cache itself, so no
+      // per-screen invalidation is needed (and invalidating by the now-stale
+      // token afterwards wouldn't touch the right cache entry anyway).
+      { text: 'OK', onPress: () => logout() }
     ]);
-  }, [logout, queryClient, token]);
+  }, [logout]);
 
   // Memoized derived values
   const displayFullName = userProfile?.first_name || userProfile?.last_name
@@ -105,7 +106,7 @@ function ProfileScreen({ navigation }: { navigation: any }) {
         : 'Food Explorer';
 
   if (isProfileLoading) return <LoadingState />;
-  if (!token) return <NotLoggedInState navigation={navigation} />;
+  if (!token) return <NotLoggedInState onLogout={logout} />;
   if (isProfileError) return <ErrorState refetchProfile={refetchProfile} handleLogout={handleLogout} />;
 
   return (

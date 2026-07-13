@@ -22,11 +22,13 @@ import { FoodSpotItem } from '../components/FoodSpot';
 import { SearchBar, FilterModal } from '@/app/components/UI';
 
 import { useFoodSpots } from '../hooks/useFoodSpots';
+import { useFoodSpotListFilters } from '../hooks/useFoodSpotListFilters';
 import colors from '../styles/colors';
 import { getIconForCategory } from '../utils/categoryIcons';
 
 // Types
-import { FoodSpot } from '../types/appTypes';
+import { FoodSpot, NavigationProps, RootStackParamList } from '../types/appTypes';
+import { RouteProp } from '@react-navigation/native';
 
 // Category Selection Modal Component
 const CategorySelectionModal = ({ 
@@ -131,23 +133,33 @@ const EmptyState = ({ category, isLoading, isFetching }: { category: string; isL
 };
 
 function CategorizedFoodSpotsScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { category } = route.params as { category: string };
+  const navigation = useNavigation<NavigationProps>();
+  const route = useRoute<RouteProp<RootStackParamList, 'CategorizedFoodSpots'>>();
+  const { category } = route.params;
 
   // UI state - simplified, no category filtering in modal
-  const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(category); // Pre-select the passed category
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-  
-  // Filter state for the filter modal (excluding category since it's handled separately)
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedPriceRange, setSelectedPriceRange] = useState('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [priceSortDirection, setPriceSortDirection] = useState<'asc' | 'desc' | ''>('');
 
   // Query for food spots using the same hook as HomeScreen
   const { data: currentData, isLoading, isError, isFetching, refetch } = useFoodSpots('all');
+
+  // Shared search/filter/sort logic (also used by HomeScreen)
+  const {
+    searchText,
+    setSearchText,
+    selectedCategory,
+    setSelectedCategory,
+    selectedPriceRange,
+    setSelectedPriceRange,
+    sortDirection,
+    setSortDirection,
+    priceSortDirection,
+    setPriceSortDirection,
+    categories,
+    filteredFoodSpots,
+    spotSuggestions,
+  } = useFoodSpotListFilters(currentData, { initialCategory: category }); // Pre-select the passed category
 
   // Sort options for the filter modal
   const sortOptions = [
@@ -155,67 +167,10 @@ function CategorizedFoodSpotsScreen() {
     { label: 'Lowest Rated', value: 'asc' },
   ];
 
-  // Memoized categories
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    currentData.forEach((spot: FoodSpot) => {
-      if (spot.category) set.add(spot.category);
-    });
-    return Array.from(set).sort();
-  }, [currentData]);
-
-  // Memoized filtered food spots - category, search, price range, and sorting
-  const filteredFoodSpots = useMemo(() => {
-    let filtered = currentData.filter((spot: FoodSpot) => {
-      const matchesSearch = spot.name.toLowerCase().includes(searchText.toLowerCase());
-      const matchesCategory = !selectedCategory || 
-        (spot.category && spot.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-      const matchesPriceRange = !selectedPriceRange || spot.price_range === selectedPriceRange;
-      return matchesSearch && matchesCategory && matchesPriceRange;
-    });
-
-    // Apply sorting
-    if (priceSortDirection) {
-      // Sort by price range (€, €€, €€€, €€€€)
-      const priceOrder = ['€', '€€', '€€€', '€€€€'];
-      filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
-        const aIndex = priceOrder.indexOf(a.price_range || '');
-        const bIndex = priceOrder.indexOf(b.price_range || '');
-        if (priceSortDirection === 'asc') {
-          return aIndex - bIndex;
-        } else {
-          return bIndex - aIndex;
-        }
-      });
-    } else {
-      // Sort by rating (default or when no price sorting)
-      filtered = filtered.sort((a: FoodSpot, b: FoodSpot) => {
-        if (sortDirection === 'asc') {
-          return (a.rating || 0) - (b.rating || 0);
-        } else {
-          return (b.rating || 0) - (a.rating || 0);
-        }
-      });
-    }
-    
-    return filtered;
-  }, [currentData, searchText, selectedCategory, selectedPriceRange, sortDirection, priceSortDirection]);
-
-  // Memoized food spot name suggestions
-  const spotSuggestions = useMemo(() => {
-    if (!searchText || !currentData) return [];
-    return currentData
-      .filter((spot: FoodSpot) =>
-        spot.name.toLowerCase().startsWith(searchText.toLowerCase())
-      )
-      .map((spot: FoodSpot) => spot.name)
-      .slice(0, 5);
-  }, [searchText, currentData]);
-
   // --- Memoized Callbacks ---
   const handleRefresh = useCallback(() => refetch(), [refetch]);
   const navigateToDetail = useCallback((item: FoodSpot) => {
-    (navigation as any).navigate('FoodSpotDetail', { foodSpot: item });
+    navigation.navigate('FoodSpotDetail', { foodSpot: item });
   }, [navigation]);
   const renderItem = useCallback(({ item }: { item: FoodSpot }) => (
     <FoodSpotItem item={item} onPress={() => navigateToDetail(item)} />
@@ -249,7 +204,10 @@ function CategorizedFoodSpotsScreen() {
   );
 
   // --- Render ---
-  if (isLoading && !isFetching && filteredFoodSpots.length === 0) {
+  // NOTE: isLoading and isFetching are both true during the initial fetch in
+  // React Query v5, so `isLoading && !isFetching` was never true on first
+  // load and this loading screen effectively never rendered.
+  if ((isLoading || isFetching) && filteredFoodSpots.length === 0) {
     return <LoadingState />;
   }
 
